@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"strings"
 )
 
 // HTTPClient 支持socks或者http代理的，以及cookie的http客户端
@@ -15,28 +16,17 @@ type HTTPClient struct {
 
 // Default 默认的http客户端
 // 建议没有特殊需求的功能都使用这个客户端
-var Default *HTTPClient
-
-// SetHeader 设置http请求头
-func (c *HTTPClient) SetHeader(header http.Header) {
-	c.Header = header
-}
-
-// Init 初始化cookiejar
-func (c *HTTPClient) Init(header *http.Header) {
-	if c.Jar == nil {
-		jar, _ := cookiejar.New(nil)
-		c.Jar = jar
-	}
-	if header != nil {
-		c.SetHeader(*header)
-	}
-}
+var Default = NewHTTPClient("")
 
 // NewHTTPClient 创建新的 http client 客户端
 // proxyURL 客户端代理 proxy: socks or http
 func NewHTTPClient(proxyURL string) *HTTPClient {
 	client := &HTTPClient{}
+	// 设置默认的请求头
+	client.Header = make(http.Header)
+	client.Header.Set("User-Agent", "Haruno Bot")
+	jar, _ := cookiejar.New(nil)
+	client.Jar = jar
 	if proxyURL != "" {
 		proxy := func(_ *http.Request) (*url.URL, error) {
 			return url.Parse(proxyURL)
@@ -57,4 +47,37 @@ func (c *HTTPClient) NewRequest(method, url string, body io.Reader) (*http.Reque
 		req.Header = c.Header
 	}
 	return req, nil
+}
+
+// Head 增强http.Client.Head方法
+func (c *HTTPClient) Head(url string) (*http.Response, error) {
+	req, err := c.NewRequest(http.MethodHead, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return c.Do(req)
+}
+
+// Get 增强http.Client.Get方法
+func (c *HTTPClient) Get(url string) (*http.Response, error) {
+	req, err := c.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return c.Do(req)
+}
+
+// Post 增强http.Client.Post方法
+func (c *HTTPClient) Post(url string, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := c.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", contentType)
+	return c.Do(req)
+}
+
+// PostForm 增强http.Client.PostForm方法
+func (c *HTTPClient) PostForm(url string, data url.Values) (*http.Response, error) {
+	return c.Post(url, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 }
