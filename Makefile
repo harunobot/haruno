@@ -9,5 +9,3 @@ debug:
 	go run haruno.go
 
 .PHONY: build debug
-
-
