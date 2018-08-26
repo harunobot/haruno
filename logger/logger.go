@@ -15,6 +15,17 @@ import (
 
 var upgrader = websocket.Upgrader{}
 
+// LogTypeInfo 信息类型
+const LogTypeInfo = 0
+
+// LogTypeError 错误类型
+const LogTypeError = 1
+
+// LogTypeSuccess 成功on类型
+const LogTypeSuccess = 2
+
+var logTypeStr = []string{"info", "error", "success"}
+
 // Log log消息格式(json)
 type Log struct {
 	Time int64  `json:"time"`
@@ -22,11 +33,19 @@ type Log struct {
 	Text string `json:"text"`
 }
 
-// Logger 全局的log服务
-// LogsPath 本地log文件目录
-type logger struct {
+// NewLog 创建一个新的Log实例
+func NewLog(ltype int, text string) *Log {
+	now := time.Now().Unix()
+	return &Log{
+		Time: now,
+		Type: logTypeStr[ltype],
+		Text: text,
+	}
+}
+
+type loggerService struct {
 	conns    map[*websocket.Conn]bool
-	LogsPath string
+	logsPath string
 	queue    []Log
 	mu       sync.Mutex
 }
@@ -37,56 +56,56 @@ const logTimeLayout = "2006年01月02日 15:04:05"
 const pingWaitTime = 5 * time.Second
 
 // Service 单例实体
-var Service logger
+var Service loggerService
 
 // SetLogsPath 设置log文件目录
-func (lger *logger) SetLogsPath(p string) {
-	lger.LogsPath = p
+func (logger *loggerService) SetLogsPath(p string) {
+	logger.logsPath = p
 }
 
-// GetLogsPath 获取logs文件的绝对路径
-func (lger *logger) GetLogsPath() string {
+// LogsPath 获取logs文件的绝对路径
+func (logger *loggerService) LogsPath() string {
 	pwd, _ := os.Getwd()
-	logspath := path.Join(pwd, lger.LogsPath)
+	logspath := path.Join(pwd, logger.logsPath)
 	return logspath
 }
 
-// GetLogFile 获取当前log文件的位置
-func (lger *logger) GetLogFile() string {
-	logspath := lger.GetLogsPath()
+// LogFile 获取当前log文件的位置
+func (logger *loggerService) LogFile() string {
+	logspath := logger.LogsPath()
 	date := time.Now().Format(logDateLayout)
 	filename := fmt.Sprintf("%s.log", date)
 	return path.Join(logspath, filename)
 }
 
-// PushLog 往队列里加入一个新的log
-func (lger *logger) PushLog(lg *Log) {
-	lger.queue = append(lger.queue, *lg)
+// Add 往队列里加入一个新的log
+func (logger *loggerService) Add(lg *Log) {
+	logger.queue = append(logger.queue, *lg)
 }
 
-// PopLog 冲队列中取出一个log
-func (lger *logger) PopLog() (int, *Log) {
-	if len(lger.queue) == 0 {
+// pop 冲队列中取出一个log
+func (logger *loggerService) pop() (int, *Log) {
+	if len(logger.queue) == 0 {
 		return 0, nil
 	}
-	lg := &lger.queue[0]
-	lger.queue = lger.queue[1:]
+	lg := &logger.queue[0]
+	logger.queue = logger.queue[1:]
 	return 1, lg
 }
 
-// WriteToFile log写入文件
-func (lger *logger) WriteToFile(lg *Log) {
+// writeToFile log写入文件
+func (logger *loggerService) writeToFile(lg *Log) {
 	logtime := time.Unix(lg.Time, 0).Format(logTimeLayout)
-	logfile := lger.GetLogFile()
+	logfile := logger.LogFile()
 	fp, err := os.OpenFile(logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		log.Fatal("Logger", err)
 	}
 	logstr := fmt.Sprintf("%s [%s]: %s\n", lg.Type, logtime, lg.Text)
 	defer fp.Close()
-	lger.mu.Lock()
+	logger.mu.Lock()
 	fp.WriteString(logstr)
-	lger.mu.Unlock()
+	logger.mu.Unlock()
 }
 
 func setupPong(conn *websocket.Conn, lock *sync.Mutex) {
@@ -127,7 +146,7 @@ func wsLogHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log := Log{Type: "error", Time: time.Now().Unix(), Text: err.Error()}
-		Service.PushLog(&log)
+		Service.Add(&log)
 		return
 	}
 	welcome := &Log{
@@ -145,12 +164,12 @@ func wsLogHandler(w http.ResponseWriter, r *http.Request) {
 		if !Service.conns[conn] {
 			return
 		}
-		cnt, lg := Service.PopLog()
+		cnt, lg := Service.pop()
 		if cnt == 0 {
 			time.Sleep(time.Second)
 			continue
 		}
-		Service.WriteToFile(lg)
+		Service.writeToFile(lg)
 		for c, ok := range Service.conns {
 			if !ok {
 				continue
@@ -178,7 +197,7 @@ func rawLogHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logfileName := fmt.Sprintf("%s.log", tim.Format(logDateLayout))
-	logfilePath := path.Join(Service.GetLogsPath(), logfileName)
+	logfilePath := path.Join(Service.LogsPath(), logfileName)
 	stat, err := os.Stat(logfilePath)
 	if err != nil && os.IsNotExist(err) {
 		// 不存在目录的时候创建目录
@@ -207,11 +226,11 @@ func rawLogHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Listen 监听一个端口 提供websocket和http服务
-func (lger *logger) Listen(port int) {
-	if lger.LogsPath == "" {
+func (logger *loggerService) Listen(port int) {
+	if logger.logsPath == "" {
 		log.Fatal("LogsPath not set please use logger.Default.SetLogsPath func set it.")
 	}
-	logspath := lger.GetLogsPath()
+	logspath := logger.LogsPath()
 	log.Printf("LogsPath = %s\n", logspath)
 	_, err := os.Stat(logspath)
 	if err != nil {
