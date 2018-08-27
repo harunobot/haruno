@@ -46,7 +46,7 @@ func NewLog(ltype int, text string) *Log {
 type loggerService struct {
 	conns    map[*websocket.Conn]bool
 	logsPath string
-	queue    []Log
+	queue    []*Log
 	mu       sync.Mutex
 }
 
@@ -80,7 +80,13 @@ func (logger *loggerService) LogFile() string {
 
 // Add 往队列里加入一个新的log
 func (logger *loggerService) Add(lg *Log) {
-	logger.queue = append(logger.queue, *lg)
+	logger.queue = append(logger.queue, lg)
+}
+
+// AddLog 往队列里加入一个新的log
+func (logger *loggerService) AddLog(ltype int, text string) {
+	lg := NewLog(ltype, text)
+	logger.queue = append(logger.queue, lg)
 }
 
 // pop 冲队列中取出一个log
@@ -88,7 +94,7 @@ func (logger *loggerService) pop() (int, *Log) {
 	if len(logger.queue) == 0 {
 		return 0, nil
 	}
-	lg := &logger.queue[0]
+	lg := logger.queue[0]
 	logger.queue = logger.queue[1:]
 	return 1, lg
 }
