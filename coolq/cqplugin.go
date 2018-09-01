@@ -1,9 +1,5 @@
 package coolq
 
-import (
-	"log"
-)
-
 var entries = []Plugin{}
 
 // Plugin 插件基础接口
@@ -15,24 +11,6 @@ type Plugin interface {
 	Filters() map[string]Filter
 	Hanlders() map[string]Handler
 	OnLoad()
-}
-
-// loadAllPlugins 加载全部的插件
-func loadAllPlugins() {
-	// 先全部执行加载函数
-	for _, plug := range entries {
-		err := plug.Load()
-		if err != nil {
-			log.Fatalln(err.Error())
-		}
-	}
-	Default.registerAllPlugins()
-	// 触发所有插件的onload事件
-	go func() {
-		for _, plug := range entries {
-			plug.OnLoad()
-		}
-	}()
 }
 
 // PluginRegister 插件注册

@@ -3,6 +3,7 @@ package coolq
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -51,6 +52,14 @@ func handleError(err error) {
 }
 
 func (c *cqclient) registerAllPlugins() {
+	// 先全部执行加载函数
+	for _, plug := range entries {
+		err := plug.Load()
+		if err != nil {
+			log.Fatalln(err.Error())
+		}
+	}
+	// 注册所有的handler和filter
 	for _, plug := range entries {
 		pluginName := plug.Name()
 		pluginFilters := plug.Filters()
@@ -83,12 +92,18 @@ func (c *cqclient) registerAllPlugins() {
 		}
 		c.pluginEntries[pluginName] = entry
 	}
+	// 触发所有插件的onload事件
+	go func() {
+		for _, plug := range entries {
+			plug.OnLoad()
+		}
+	}()
 }
 
 func (c *cqclient) Initialize() {
-	c.pluginEntries = make(map[string]pluginEntry)
 	c.apiConn.Name = "API"
 	c.eventConn.Name = "Event"
+	c.registerAllPlugins()
 	// handle connect
 	c.apiConn.OnConnect = handleConnect
 	c.eventConn.OnConnect = handleConnect
