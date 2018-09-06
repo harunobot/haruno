@@ -21,7 +21,7 @@ var Default = NewHTTPClient("")
 // NewHTTPClient 创建新的 http client 客户端
 // proxyURL 客户端代理 proxy: socks or http
 func NewHTTPClient(proxyURL string) *HTTPClient {
-	client := &HTTPClient{}
+	client := new(HTTPClient)
 	// 设置默认的请求头
 	client.Header = make(http.Header)
 	client.Header.Set("User-Agent", "Haruno Bot")
