@@ -26,7 +26,7 @@ type config struct {
 // haruno 晴乃机器人
 // 机器人运行的全局属性
 type haruno struct {
-	startTime time.Time
+	startTime int64
 	port      int
 	logpath   string
 	version   string
@@ -41,7 +41,7 @@ func (bot *haruno) Initialize() {
 	if err != nil {
 		log.Fatal("Haruno Initialize fialed", err)
 	}
-	bot.startTime = time.Now()
+	bot.startTime = time.Now().UnixNano() / 1e6
 	bot.port = cfg.Haurno.Port
 	bot.logpath = cfg.Haurno.Logs
 	bot.version = cfg.Version
@@ -50,16 +50,18 @@ func (bot *haruno) Initialize() {
 
 // Status 运行状态json格式
 type Status struct {
-	Fails   int   `json:"fails"`
-	Success int   `json:"success"`
-	Start   int64 `json:"start"`
+	Version string `json:"version"`
+	Success int    `json:"success"`
+	Fails   int    `json:"fails"`
+	Start   int64  `json:"start"`
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	status := new(Status)
 	status.Fails = logger.Service.Fails()
 	status.Success = logger.Service.Success()
-	status.Start = bot.startTime.UnixNano() / 1e6
+	status.Start = bot.startTime
+	status.Version = bot.version
 	json.NewEncoder(w).Encode(status)
 }
 
