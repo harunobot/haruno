@@ -45,6 +45,8 @@ func NewLog(ltype int, text string) *Log {
 
 type loggerService struct {
 	conns    map[*websocket.Conn]bool
+	Success  int
+	Fails    int
 	logsPath string
 	queue    []*Log
 	mu       sync.Mutex
@@ -80,13 +82,19 @@ func (logger *loggerService) LogFile() string {
 
 // Add 往队列里加入一个新的log
 func (logger *loggerService) Add(lg *Log) {
+	switch lg.Type {
+	case logTypeStr[LogTypeSuccess]:
+		logger.Success++
+	case logTypeStr[LogTypeError]:
+		logger.Fails++
+	}
 	logger.queue = append(logger.queue, lg)
 }
 
 // AddLog 往队列里加入一个新的log
 func (logger *loggerService) AddLog(ltype int, text string) {
 	lg := NewLog(ltype, text)
-	logger.queue = append(logger.queue, lg)
+	logger.Add(lg)
 }
 
 // pop 冲队列中取出一个log
@@ -147,19 +155,14 @@ const (
 	InnerServerError = "服务器内部错误"
 )
 
-// wsLogHandler 广播log
-func wsLogHandler(w http.ResponseWriter, r *http.Request) {
+// WSLogHandler 广播log
+func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log := Log{Type: "error", Time: time.Now().Unix(), Text: err.Error()}
-		Service.Add(&log)
+		Service.AddLog(LogTypeError, err.Error())
 		return
 	}
-	welcome := &Log{
-		Type: "success",
-		Time: time.Now().Unix(),
-		Text: "Log websocket 服务连接成功",
-	}
+	welcome := NewLog(LogTypeSuccess, "Log websocket 服务连接成功")
 	var lock sync.Mutex
 	lock.Lock()
 	Service.conns[conn] = true
@@ -188,7 +191,8 @@ func wsLogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func rawLogHandler(w http.ResponseWriter, r *http.Request) {
+// RawLogHandler 获取log文件
+func RawLogHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	date := query.Get("date")
 	if date == "" {
@@ -204,6 +208,7 @@ func rawLogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	logfileName := fmt.Sprintf("%s.log", tim.Format(logDateLayout))
 	logfilePath := path.Join(Service.LogsPath(), logfileName)
+	fmt.Println(logfilePath)
 	stat, err := os.Stat(logfilePath)
 	if err != nil && os.IsNotExist(err) {
 		// 不存在目录的时候创建目录
@@ -231,8 +236,8 @@ func rawLogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Listen 监听一个端口 提供websocket和http服务
-func (logger *loggerService) Listen(port int) {
+// Initialize 初始化logger服务
+func (logger *loggerService) Initialize() {
 	if logger.logsPath == "" {
 		log.Fatal("LogsPath not set please use logger.Default.SetLogsPath func set it.")
 	}
@@ -252,12 +257,4 @@ func (logger *loggerService) Listen(port int) {
 	}
 	// 创建连接池
 	Service.conns = make(map[*websocket.Conn]bool)
-	http.HandleFunc("/log/-/type=websocket", wsLogHandler)
-	http.HandleFunc("/log/-/type=plain", rawLogHandler)
-	addr := fmt.Sprintf("0.0.0.0:%d", port)
-	log.Printf("Logger server works on http://%s.\n", addr)
-	err = http.ListenAndServe(addr, nil)
-	if err != nil {
-		log.Fatal("Logger listen fialed", err)
-	}
 }
