@@ -45,8 +45,8 @@ func NewLog(ltype int, text string) *Log {
 
 type loggerService struct {
 	conns    map[*websocket.Conn]bool
-	Success  int
-	Fails    int
+	success  int
+	fails    int
 	logsPath string
 	queue    []*Log
 	mu       sync.Mutex
@@ -80,13 +80,23 @@ func (logger *loggerService) LogFile() string {
 	return path.Join(logspath, filename)
 }
 
+// Success 获取成功计数
+func (logger *loggerService) Success() int {
+	return logger.success
+}
+
+// Success 获取失败计数
+func (logger *loggerService) Fails() int {
+	return logger.fails
+}
+
 // Add 往队列里加入一个新的log
 func (logger *loggerService) Add(lg *Log) {
 	switch lg.Type {
 	case logTypeStr[LogTypeSuccess]:
-		logger.Success++
+		logger.success++
 	case logTypeStr[LogTypeError]:
-		logger.Fails++
+		logger.fails++
 	}
 	logger.queue = append(logger.queue, lg)
 }

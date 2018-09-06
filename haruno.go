@@ -57,8 +57,8 @@ type Status struct {
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	status := new(Status)
-	status.Fails = logger.Service.Fails
-	status.Success = logger.Service.Success
+	status.Fails = logger.Service.Fails()
+	status.Success = logger.Service.Success()
 	status.Start = bot.startTime.UnixNano() / 1e6
 	json.NewEncoder(w).Encode(status)
 }
