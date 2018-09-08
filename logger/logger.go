@@ -53,8 +53,8 @@ type loggerService struct {
 }
 
 // 时间格式等基本的常量
-const logDateLayout = "2006-01-02"
-const logTimeLayout = "2006年01月02日 15:04:05"
+const logDateFormat = "2006-01-02"
+const logTimeFormat = "2006年01月02日 15:04:05"
 const pingWaitTime = 5 * time.Second
 
 // Service 单例实体
@@ -75,7 +75,7 @@ func (logger *loggerService) LogsPath() string {
 // LogFile 获取当前log文件的位置
 func (logger *loggerService) LogFile() string {
 	logspath := logger.LogsPath()
-	date := time.Now().Format(logDateLayout)
+	date := time.Now().Format(logDateFormat)
 	filename := fmt.Sprintf("%s.log", date)
 	return path.Join(logspath, filename)
 }
@@ -119,7 +119,7 @@ func (logger *loggerService) pop() (int, *Log) {
 
 // writeToFile log写入文件
 func (logger *loggerService) writeToFile(lg *Log) {
-	logtime := time.Unix(lg.Time, 0).Format(logTimeLayout)
+	logtime := time.Unix(lg.Time, 0).Format(logTimeFormat)
 	logfile := logger.LogFile()
 	fp, err := os.OpenFile(logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
@@ -210,15 +210,15 @@ func RawLogHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(RequestParamError))
 		return
 	}
-	tim, err := time.Parse(logDateLayout, date)
+	tim, err := time.Parse(logDateFormat, date)
 	if err != nil {
 		w.WriteHeader(404)
 		w.Write([]byte(RequestParamError))
 		return
 	}
-	logfileName := fmt.Sprintf("%s.log", tim.Format(logDateLayout))
+
+	logfileName := fmt.Sprintf("%s.log", tim.Format(logDateFormat))
 	logfilePath := path.Join(Service.LogsPath(), logfileName)
-	fmt.Println(logfilePath)
 	stat, err := os.Stat(logfilePath)
 	if err != nil && os.IsNotExist(err) {
 		// 不存在目录的时候创建目录

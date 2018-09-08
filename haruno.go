@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/haruno-bot/haruno/logger"
@@ -34,8 +35,7 @@ type haruno struct {
 
 var bot = new(haruno)
 
-// Initialize 从配置文件读取配置初始化
-func (bot *haruno) Initialize() {
+func (bot *haruno) loadConfig() {
 	cfg := new(config)
 	_, err := toml.DecodeFile("./config.toml", cfg)
 	if err != nil {
@@ -45,11 +45,18 @@ func (bot *haruno) Initialize() {
 	bot.port = cfg.Haurno.Port
 	bot.logpath = cfg.Haurno.Logs
 	bot.version = cfg.Version
+}
+
+// Initialize 从配置文件读取配置初始化
+func (bot *haruno) Initialize() {
+	bot.loadConfig()
 	logger.Service.SetLogsPath(bot.logpath)
+	logger.Service.Initialize()
 }
 
 // Status 运行状态json格式
 type Status struct {
+	Go      int    `json:"go"`
 	Version string `json:"version"`
 	Success int    `json:"success"`
 	Fails   int    `json:"fails"`
@@ -62,6 +69,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	status.Success = logger.Service.Success()
 	status.Start = bot.startTime
 	status.Version = bot.version
+	status.Go = runtime.NumGoroutine()
 	json.NewEncoder(w).Encode(status)
 }
 
