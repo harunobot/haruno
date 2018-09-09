@@ -122,3 +122,31 @@ func Unmarshal(raw []byte, msg *Message) error {
 	}
 	return nil
 }
+
+// NewSection 创建一个新的段落
+func NewSection(t string, d map[string]string) Section {
+	return Section{
+		Type: t,
+		Data: d,
+	}
+}
+
+// NewTextSection 创建一个新的文本段落
+func NewTextSection(text string) Section {
+	return Section{
+		Type: "text",
+		Data: map[string]string{
+			"text": Escape(text),
+		},
+	}
+}
+
+// NewImageSection 创建一个新的图片段落
+func NewImageSection(src string) Section {
+	return Section{
+		Type: "image",
+		Data: map[string]string{
+			"file": Escape(src),
+		},
+	}
+}
