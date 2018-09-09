@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -23,7 +24,24 @@ type Section struct {
 // Message 酷q消息
 type Message []Section
 
-// Marshal 序列化一个消息为cq的消息格式
+// Escape cq码转义
+// & -> &amp;
+// [ -> &#91;
+// ] -> &#93;
+// , -> &#44;
+func Escape(txt string) string {
+	pattern, _ := regexp.Compile("&")
+	txt = pattern.ReplaceAllString(txt, "&amp;")
+	pattern, _ = regexp.Compile("[")
+	txt = pattern.ReplaceAllString(txt, "&#91;")
+	pattern, _ = regexp.Compile("]")
+	txt = pattern.ReplaceAllString(txt, "&#93;")
+	pattern, _ = regexp.Compile(",")
+	txt = pattern.ReplaceAllString(txt, "&#44;")
+	return txt
+}
+
+// Marshal 序列化成一个包含cq码的信息
 func Marshal(msg Message) []byte {
 	buff := new(bytes.Buffer)
 	for _, section := range msg {
