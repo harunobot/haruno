@@ -53,8 +53,8 @@ func (_plugin Plugin) Handlers() map[string]Handler {
 func (_plugin Plugin) OnLoad() {
 }
 
-// HTTPHanderFuncs http处理函数
-func (_plugin Plugin) HTTPHanderFuncs() map[string]http.HandlerFunc {
+// HTTPHandlerFuncs http处理函数
+func (_plugin Plugin) HTTPHandlerFuncs() map[string]http.HandlerFunc {
 	return nil
 }
 
