@@ -9,3 +9,7 @@ logs
 build
 debug
 config.toml
+
+# static files
+
+server/*
