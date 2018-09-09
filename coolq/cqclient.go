@@ -63,7 +63,7 @@ func (c *cqclient) registerAllPlugins() {
 	for _, plug := range entries {
 		pluginName := plug.Name()
 		pluginFilters := plug.Filters()
-		pluginHandlers := plug.Hanlders()
+		pluginHandlers := plug.Handlers()
 		hasFilter := make(map[string]bool)
 		entry := pluginEntry{
 			fitlers:  make(map[string]Filter),
@@ -101,8 +101,8 @@ func (c *cqclient) registerAllPlugins() {
 }
 
 func (c *cqclient) Initialize() {
-	c.apiConn.Name = "API"
-	c.eventConn.Name = "Event"
+	c.apiConn.Name = "Haruno Api Conn"
+	c.eventConn.Name = "Haruno Event Conn"
 	c.registerAllPlugins()
 	// handle connect
 	c.apiConn.OnConnect = handleConnect
@@ -166,7 +166,7 @@ func (c *cqclient) Connect(url string, token string) {
 
 // Default 唯一的酷q机器人实体
 var Default = &cqclient{
-	apiConn:       &clients.WSClient{},
-	eventConn:     &clients.WSClient{},
+	apiConn:       new(clients.WSClient),
+	eventConn:     new(clients.WSClient),
 	pluginEntries: make(map[string]pluginEntry),
 }

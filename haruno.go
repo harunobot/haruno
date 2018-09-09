@@ -8,20 +8,18 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/haruno-bot/haruno/logger"
+	"github.com/haruno-bot/haruno/coolq"
+
+	"github.com/haruno-bot/haruno/plugins"
 
 	"github.com/BurntSushi/toml"
+	"github.com/haruno-bot/haruno/logger"
 )
 
-// HarunoCfg 晴乃配置
-type HarunoCfg struct {
-	Logs string `toml:"logs"`
-	Port int    `toml:"port"`
-}
-
 type config struct {
-	Version string    `toml:"version"`
-	Haurno  HarunoCfg `toml:"haruno"`
+	Version    string `toml:"version"`
+	LogsPath   string `toml:"logsPath"`
+	ServerPort int    `toml:"serverPort"`
 }
 
 // haruno 晴乃机器人
@@ -42,16 +40,18 @@ func (bot *haruno) loadConfig() {
 		log.Fatal("Haruno Initialize fialed", err)
 	}
 	bot.startTime = time.Now().UnixNano() / 1e6
-	bot.port = cfg.Haurno.Port
-	bot.logpath = cfg.Haurno.Logs
+	bot.port = cfg.ServerPort
+	bot.logpath = cfg.LogsPath
 	bot.version = cfg.Version
 }
 
 // Initialize 从配置文件读取配置初始化
 func (bot *haruno) Initialize() {
 	bot.loadConfig()
+	plugins.SetupPlugins()
 	logger.Service.SetLogsPath(bot.logpath)
 	logger.Service.Initialize()
+	coolq.Default.Initialize()
 }
 
 // Status 运行状态json格式
@@ -69,16 +69,21 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	status.Success = logger.Service.Success()
 	status.Start = bot.startTime
 	status.Version = bot.version
+	w.Header().Set("Content-Type", "application/json")
 	status.Go = runtime.NumGoroutine()
 	json.NewEncoder(w).Encode(status)
 }
 
 // Run 启动机器人
 func (bot *haruno) Run() {
+	page := http.FileServer(http.Dir("./server"))
+	http.Handle("/", page)
+
+	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/logs/-/type=websocket", logger.WSLogHandler)
 	http.HandleFunc("/logs/-/type=plain", logger.RawLogHandler)
-	http.HandleFunc("/status", statusHandler)
-	addr := fmt.Sprintf("0.0.0.0:%d", bot.port)
+
+	addr := fmt.Sprintf("127.0.0.1:%d", bot.port)
 	log.Printf("Haruno server works on http://%s.\n", addr)
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
