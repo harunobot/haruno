@@ -1,6 +1,7 @@
 package coolq
 
 import (
+	"log"
 	"net/http"
 )
 
@@ -14,8 +15,8 @@ type pluginInterface interface {
 	Load() error
 	Filters() map[string]Filter
 	Handlers() map[string]Handler
-	HTTPHanders() map[string]http.Handler
-	HTTPHanderFuncs() map[string]http.HandlerFunc
+	HTTPHandlers() map[string]http.Handler
+	HTTPHandlerFuncs() map[string]http.HandlerFunc
 	OnLoad()
 }
 
@@ -57,7 +58,39 @@ func (_plugin Plugin) HTTPHanderFuncs() map[string]http.HandlerFunc {
 	return nil
 }
 
-// HTTPHanders http处理器
-func (_plugin Plugin) HTTPHanders() map[string]http.Handler {
+// HTTPHandlers http处理器
+func (_plugin Plugin) HTTPHandlers() map[string]http.Handler {
 	return nil
+}
+
+// AllHTTPHanderFuncs 获取所有插件的 HandlerFunc
+func AllHTTPHanderFuncs() map[string]http.HandlerFunc {
+	ret := make(map[string]http.HandlerFunc)
+	for _, _plugin := range entries {
+		pluginName := _plugin
+		funcs := _plugin.HTTPHandlerFuncs()
+		for routerPath, handlerFunc := range funcs {
+			if ret[routerPath] != nil {
+				log.Fatalf("Plugin: %s has a duplicate router (path: %s) HandlerFunc that is against others.\n", pluginName, routerPath)
+			}
+			ret[routerPath] = handlerFunc
+		}
+	}
+	return ret
+}
+
+// AllHTTPHandlers 获取所有插件的 HandlerFunc
+func AllHTTPHandlers() map[string]http.Handler {
+	ret := make(map[string]http.Handler)
+	for _, _plugin := range entries {
+		pluginName := _plugin
+		funcs := _plugin.HTTPHandlers()
+		for routerPath, handlerFunc := range funcs {
+			if ret[routerPath] != nil {
+				log.Fatalf("Plugin: %s has a duplicate router (path: %s) Handler that is against others.\n", pluginName, routerPath)
+			}
+			ret[routerPath] = handlerFunc
+		}
+	}
+	return ret
 }

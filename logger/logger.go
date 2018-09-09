@@ -111,15 +111,15 @@ func (logger *loggerService) AddLog(ltype int, text string) {
 }
 
 // pop 冲队列中取出一个log
-func (logger *loggerService) pop() (int, *Log) {
+func (logger *loggerService) pop() (bool, *Log) {
 	if len(logger.queue) == 0 {
-		return 0, nil
+		return false, nil
 	}
 	lg := logger.queue[0]
 	logger.muLog.Lock()
 	logger.queue = logger.queue[1:]
 	logger.muLog.Unlock()
-	return 1, lg
+	return true, lg
 }
 
 // writeToFile log写入文件
@@ -188,8 +188,8 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 		if !Service.conns[conn] {
 			return
 		}
-		cnt, lg := Service.pop()
-		if cnt == 0 {
+		ok, lg := Service.pop()
+		if !ok {
 			time.Sleep(time.Second)
 			continue
 		}
@@ -257,13 +257,13 @@ func (logger *loggerService) setupTransaction() {
 	for {
 		select {
 		case <-ticker.C:
-			cnt, logMsg := logger.pop()
-			if cnt != 0 {
+			ok, logMsg := logger.pop()
+			if ok {
 				log.Printf("Log queue (%d) will be cleanup.\n", len(logger.queue)+1)
 			}
-			for cnt != 0 {
+			for ok {
 				logger.writeToFile(logMsg)
-				cnt, logMsg = logger.pop()
+				ok, logMsg = logger.pop()
 			}
 		}
 	}
