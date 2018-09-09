@@ -258,12 +258,17 @@ func (logger *loggerService) setupTransaction() {
 		select {
 		case <-ticker.C:
 			ok, logMsg := logger.pop()
+			cleanup := false
 			if ok {
-				log.Printf("Log queue (%d) will be cleanup.\n", len(logger.queue)+1)
+				log.Printf("Log queue (%d) will be cleaned up.\n", len(logger.queue)+1)
 			}
 			for ok {
+				cleanup = true
 				logger.writeToFile(logMsg)
 				ok, logMsg = logger.pop()
+			}
+			if cleanup {
+				log.Println("Log queue has been cleaned up.")
 			}
 		}
 	}
