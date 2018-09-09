@@ -1,6 +1,6 @@
 package coolq
 
-// 文档: https://cqhttp.cc/docs/4.3/#/API?id=api-列表
+// 文档: https://cqhttp.cc/docs/4.4/#/API?id=api-列表
 // 大致先做这些...
 const (
 	// ActionSendPrivateMsg 发送私聊消息

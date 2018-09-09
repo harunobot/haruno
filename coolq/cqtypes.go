@@ -7,10 +7,10 @@ type Number int64
 type String string
 
 // Section 消息段落
-// https://cqhttp.cc/docs/4.3/#/Message
+// https://cqhttp.cc/docs/4.4/#/Message
 type Section struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
+	Type string            `json:"type"`
+	Data map[string]string `json:"data"`
 }
 
 // Message 酷q消息
