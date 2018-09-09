@@ -20,3 +20,16 @@ const (
 	// ActionSetRestartPlugin 重启 HTTP API 插件
 	ActionSetRestartPlugin = "set_restart_plugin"
 )
+
+// CQWSMessage coolq ws基本消息类型
+type CQWSMessage struct {
+	Action string      `json:"action"`
+	Params interface{} `json:"params"`
+}
+
+// CQTypeSendGroupMsg SendGroupMsg动作的数据类型
+type CQTypeSendGroupMsg struct {
+	GroupID    int64  `json:"group_id"`
+	Message    string `json:"message"`
+	AutoEscape bool   `json:"auto_escape"`
+}

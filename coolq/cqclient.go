@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/websocket"
+
 	"github.com/haruno-bot/haruno/clients"
 	"github.com/haruno-bot/haruno/logger"
 )
@@ -40,8 +42,8 @@ type cqclient struct {
 func handleConnect(conn *clients.WSClient) {
 	if conn.IsConnected() {
 		msgText := fmt.Sprintf("酷Q机器人%s服务已成功连接！", conn.Name)
-		connMsg := logger.NewLog(logger.LogTypeInfo, msgText)
-		logger.Service.Add(connMsg)
+		log.Println(msgText)
+		logger.Service.AddLog(logger.LogTypeInfo, msgText)
 	}
 }
 
@@ -162,6 +164,18 @@ func (c *cqclient) Connect(url string, token string) {
 	// 连接api服务和事件服务
 	c.apiConn.Dial(fmt.Sprintf("%s/api", url), headers)
 	c.eventConn.Dial(fmt.Sprintf("%s/event", url), headers)
+}
+
+func (c *cqclient) SendGroupMsg(groupID int64, message string) {
+	payload := &CQWSMessage{
+		Action: ActionSendGroupMsg,
+		Params: CQTypeSendGroupMsg{
+			GroupID: groupID,
+			Message: message,
+		},
+	}
+	msg, _ := json.Marshal(payload)
+	c.apiConn.Send(websocket.TextMessage, msg)
 }
 
 // Default 唯一的酷q机器人实体
