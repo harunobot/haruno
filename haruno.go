@@ -20,6 +20,8 @@ type config struct {
 	Version    string `toml:"version"`
 	LogsPath   string `toml:"logsPath"`
 	ServerPort int    `toml:"serverPort"`
+	CQURL      string `toml:"cqURL"`
+	CQToken    string `toml:"cqToken"`
 }
 
 // haruno 晴乃机器人
@@ -29,6 +31,8 @@ type haruno struct {
 	port      int
 	logpath   string
 	version   string
+	cqURL     string
+	cqToken   string
 }
 
 var bot = new(haruno)
@@ -43,6 +47,8 @@ func (bot *haruno) loadConfig() {
 	bot.port = cfg.ServerPort
 	bot.logpath = cfg.LogsPath
 	bot.version = cfg.Version
+	bot.cqURL = cfg.CQURL
+	bot.cqToken = cfg.CQToken
 }
 
 // Initialize 从配置文件读取配置初始化
@@ -52,6 +58,7 @@ func (bot *haruno) Initialize() {
 	logger.Service.SetLogsPath(bot.logpath)
 	logger.Service.Initialize()
 	coolq.Default.Initialize()
+	coolq.Default.Connect(bot.cqURL, bot.cqToken)
 }
 
 // Status 运行状态json格式
