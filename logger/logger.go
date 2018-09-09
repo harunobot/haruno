@@ -24,12 +24,12 @@ const LogTypeError = 1
 // LogTypeSuccess 成功on类型
 const LogTypeSuccess = 2
 
-var logTypeStr = []string{"info", "error", "success"}
+var logTypeStr = []string{"INFO", "ERROR", "SUCCESS"}
 
 // Log log消息格式(json)
 type Log struct {
 	Time int64  `json:"time"`
-	Type string `json:"type"`
+	Type int    `json:"type"`
 	Text string `json:"text"`
 }
 
@@ -38,7 +38,7 @@ func NewLog(ltype int, text string) *Log {
 	now := time.Now().Unix()
 	return &Log{
 		Time: now,
-		Type: logTypeStr[ltype],
+		Type: ltype,
 		Text: text,
 	}
 }
@@ -50,11 +50,12 @@ type loggerService struct {
 	logsPath string
 	queue    []*Log
 	mu       sync.Mutex
+	muLog    sync.Mutex
 }
 
 // 时间格式等基本的常量
 const logDateFormat = "2006-01-02"
-const logTimeFormat = "2006年01月02日 15:04:05"
+const logTimeFormat = "2006-01-02 15:04:05 -0700"
 const pingWaitTime = 5 * time.Second
 
 // Service 单例实体
@@ -93,12 +94,14 @@ func (logger *loggerService) Fails() int {
 // Add 往队列里加入一个新的log
 func (logger *loggerService) Add(lg *Log) {
 	switch lg.Type {
-	case logTypeStr[LogTypeSuccess]:
+	case LogTypeSuccess:
 		logger.success++
-	case logTypeStr[LogTypeError]:
+	case LogTypeError:
 		logger.fails++
 	}
+	logger.muLog.Lock()
 	logger.queue = append(logger.queue, lg)
+	logger.muLog.Unlock()
 }
 
 // AddLog 往队列里加入一个新的log
@@ -113,7 +116,9 @@ func (logger *loggerService) pop() (int, *Log) {
 		return 0, nil
 	}
 	lg := logger.queue[0]
+	logger.muLog.Lock()
 	logger.queue = logger.queue[1:]
+	logger.muLog.Unlock()
 	return 1, lg
 }
 
@@ -125,7 +130,7 @@ func (logger *loggerService) writeToFile(lg *Log) {
 	if err != nil {
 		log.Fatal("Logger", err)
 	}
-	logstr := fmt.Sprintf("%s [%s]: %s\n", lg.Type, logtime, lg.Text)
+	logstr := fmt.Sprintf("%s - - \"%s\" - - \"%s\"\n", logTypeStr[lg.Type], logtime, lg.Text)
 	defer fp.Close()
 	logger.mu.Lock()
 	fp.WriteString(logstr)
@@ -246,6 +251,24 @@ func RawLogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (logger *loggerService) setupTransaction() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			cnt, logMsg := logger.pop()
+			if cnt != 0 {
+				log.Printf("Log queue (%d) will be cleanup.\n", len(logger.queue)+1)
+			}
+			for cnt != 0 {
+				logger.writeToFile(logMsg)
+				cnt, logMsg = logger.pop()
+			}
+		}
+	}
+}
+
 // Initialize 初始化logger服务
 func (logger *loggerService) Initialize() {
 	if logger.logsPath == "" {
@@ -267,4 +290,5 @@ func (logger *loggerService) Initialize() {
 	}
 	// 创建连接池
 	Service.conns = make(map[*websocket.Conn]bool)
+	go logger.setupTransaction()
 }
