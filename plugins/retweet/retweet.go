@@ -149,6 +149,9 @@ func (_plugin Retweet) Load() error {
 				return
 			}
 			groupNums := _plugin.broadcast[msg.FromID]
+			if len(groupNums) == 0 {
+				return
+			}
 			switch msg.Cmd {
 			case "1": // 推文
 				// 检测是否有头像
