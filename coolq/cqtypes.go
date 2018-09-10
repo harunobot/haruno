@@ -30,13 +30,13 @@ type Message []Section
 // ] -> &#93;
 // , -> &#44;
 func Escape(txt string) string {
-	pattern, _ := regexp.Compile("&")
+	pattern, _ := regexp.Compile(`&`)
 	txt = pattern.ReplaceAllString(txt, "&amp;")
-	pattern, _ = regexp.Compile("[")
+	pattern, _ = regexp.Compile(`\[`)
 	txt = pattern.ReplaceAllString(txt, "&#91;")
-	pattern, _ = regexp.Compile("]")
+	pattern, _ = regexp.Compile(`\]`)
 	txt = pattern.ReplaceAllString(txt, "&#93;")
-	pattern, _ = regexp.Compile(",")
+	pattern, _ = regexp.Compile(`,`)
 	txt = pattern.ReplaceAllString(txt, "&#44;")
 	return txt
 }
