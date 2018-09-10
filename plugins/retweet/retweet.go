@@ -102,15 +102,19 @@ func handleAvatar(id, name, url string, groupNums []int64) {
 	cqMsg := coolq.NewMessage()
 	section := coolq.NewTextSection(fmt.Sprintf("%s\n更新了头像\n", name))
 	cqMsg = coolq.AddSection(cqMsg, section)
-	log.Printf("头像地址：\n> %s\n", url)
+	logMsg := fmt.Sprintf("头像地址： %s\n", url)
+	log.Println(logMsg)
+	logger.Service.AddLog(logger.LogTypeInfo, logMsg)
 	section = coolq.NewImageSection(url)
 	cqMsg = coolq.AddSection(cqMsg, section)
 	cqMsgTxt := string(coolq.Marshal(cqMsg))
-	log.Printf("向酷Q发送：\n> %s\n", escapeCRLF(cqMsgTxt))
+	logMsg = fmt.Sprintf("向酷Q发送： %s", escapeCRLF(cqMsgTxt))
+	log.Println(logMsg)
+	logger.Service.AddLog(logger.LogTypeInfo, logMsg)
 	for _, groupID := range groupNums {
 		coolq.Client.SendGroupMsg(groupID, cqMsgTxt)
 	}
-	logMsg := fmt.Sprintf("成功转发了一条来自%s(%s)的头像更新信息", name, id)
+	logMsg = fmt.Sprintf("成功转发了一条来自%s(%s)的头像更新信息", name, id)
 	log.Println(logMsg)
 	logger.Service.AddLog(logger.LogTypeSuccess, logMsg)
 }
@@ -156,16 +160,18 @@ func (_plugin Retweet) Load() error {
 				cqMsg = coolq.AddSection(cqMsg, section)
 				for _, img := range msg.Imgs {
 					imgSrc := fmt.Sprintf("%s%s", imgRoot, img)
-					log.Printf("包含图片：\n> %s\n", imgSrc)
+					log.Printf("包含图片： %s\n", imgSrc)
 					section = coolq.NewImageSection(imgSrc)
 					cqMsg = coolq.AddSection(cqMsg, section)
 				}
 				cqMsgTxt := string(coolq.Marshal(cqMsg))
-				log.Printf("向酷Q发送：\n> %s\n", escapeCRLF(cqMsgTxt))
+				logMsg := fmt.Sprintf("向酷Q发送： %s\n", escapeCRLF(cqMsgTxt))
+				log.Println(logMsg)
+				logger.Service.AddLog(logger.LogTypeInfo, logMsg)
 				for _, groupID := range groupNums {
 					coolq.Client.SendGroupMsg(groupID, cqMsgTxt)
 				}
-				logMsg := fmt.Sprintf("成功转发了一条来自%s(%s)的推文", msg.FromName, msg.FromID)
+				logMsg = fmt.Sprintf("成功转发了一条来自%s(%s)的推文", msg.FromName, msg.FromID)
 				log.Println(logMsg)
 				logger.Service.AddLog(logger.LogTypeSuccess, logMsg)
 			case "2": // 头像
