@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
 	"time"
 
@@ -20,7 +21,8 @@ type config struct {
 	Version    string `toml:"version"`
 	LogsPath   string `toml:"logsPath"`
 	ServerPort int    `toml:"serverPort"`
-	CQURL      string `toml:"cqURL"`
+	CQWSURL    string `toml:"cqWSURL"`
+	CQHTTPURL  string `toml:"cqHTTPURL"`
 	CQToken    string `toml:"cqToken"`
 }
 
@@ -31,7 +33,8 @@ type haruno struct {
 	port      int
 	logpath   string
 	version   string
-	cqURL     string
+	cqWSURL   string
+	cqHTTPURL string
 	cqToken   string
 }
 
@@ -47,18 +50,23 @@ func (bot *haruno) loadConfig() {
 	bot.port = cfg.ServerPort
 	bot.logpath = cfg.LogsPath
 	bot.version = cfg.Version
-	bot.cqURL = cfg.CQURL
+	bot.cqWSURL = cfg.CQWSURL
+	bot.cqHTTPURL = cfg.CQHTTPURL
 	bot.cqToken = cfg.CQToken
 }
 
 // Initialize 从配置文件读取配置初始化
 func (bot *haruno) Initialize() {
 	bot.loadConfig()
-	plugins.SetupPlugins()
+	// 设置环境变量
+	os.Setenv("CQHTTPURL", bot.cqHTTPURL)
+	os.Setenv("CQWSURL", bot.cqWSURL)
+	os.Setenv("CQTOKEN", bot.cqToken)
 	logger.Service.SetLogsPath(bot.logpath)
 	logger.Service.Initialize()
-	coolq.Default.Initialize()
-	coolq.Default.Connect(bot.cqURL, bot.cqToken)
+	plugins.SetupPlugins()
+	coolq.Client.Initialize()
+	go coolq.Client.Connect(bot.cqWSURL, bot.cqToken)
 }
 
 // Status 运行状态json格式
