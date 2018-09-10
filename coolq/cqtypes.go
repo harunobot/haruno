@@ -123,6 +123,16 @@ func Unmarshal(raw []byte, msg *Message) error {
 	return nil
 }
 
+// NewMessage 创建一个新的消息
+func NewMessage() Message {
+	return make(Message, 0)
+}
+
+// AddSection 向一个消息添加新的段落
+func AddSection(msg Message, section Section) Message {
+	return append(msg, section)
+}
+
 // NewSection 创建一个新的段落
 func NewSection(t string, d map[string]string) Section {
 	return Section{
