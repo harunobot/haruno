@@ -98,18 +98,34 @@ func escapeCRLF(s string) string {
 	return s
 }
 
+func handleAvatar(id, name, url string, groupNums []int64) {
+	cqMsg := coolq.NewMessage()
+	section := coolq.NewTextSection(fmt.Sprintf("%s\n更新了头像\n", name))
+	cqMsg = coolq.AddSection(cqMsg, section)
+	log.Printf("头像地址：\n> %s\n", url)
+	section = coolq.NewImageSection(url)
+	cqMsg = coolq.AddSection(cqMsg, section)
+	cqMsgTxt := string(coolq.Marshal(cqMsg))
+	log.Printf("向酷Q发送：\n> %s\n", escapeCRLF(cqMsgTxt))
+	for _, groupID := range groupNums {
+		coolq.Client.SendGroupMsg(groupID, cqMsgTxt)
+	}
+	logMsg := fmt.Sprintf("成功转发了一条来自%s(%s)的头像更新信息", name, id)
+	log.Println(logMsg)
+	logger.Service.AddLog(logger.LogTypeSuccess, logMsg)
+}
+
 // Load 插件加载
 func (_plugin Retweet) Load() error {
 	err := _plugin.loadConfig()
 	if err != nil {
 		return err
 	}
-
 	imgRoot := _plugin.imageRoot
 	_plugin.conn = &clients.WSClient{
 		Name: "Retweet Plugin",
 		OnConnect: func(conn *clients.WSClient) {
-			msg := fmt.Sprintf("%s has been connected to the twitter api server.", conn.Name)
+			msg := fmt.Sprintf("%s 已经连接到转推api服务器", conn.Name)
 			logger.Service.AddLog(logger.LogTypeInfo, msg)
 			log.Println(msg)
 		},
@@ -122,7 +138,7 @@ func (_plugin Retweet) Load() error {
 			}
 			if !coolq.Client.IsAPIOk() {
 				if msg.Cmd == "1" || msg.Cmd == "2" {
-					errMsg := fmt.Sprintf("A twitter message from %s was dropped(api hasn't been ok)", msg.FromName)
+					errMsg := fmt.Sprintf("一条来自%s的消息被弄丢了(因为api连接没有准备好)", msg.FromName)
 					log.Println(errMsg)
 					logger.Service.AddLog(logger.LogTypeError, errMsg)
 				}
@@ -131,6 +147,10 @@ func (_plugin Retweet) Load() error {
 			groupNums := _plugin.broadcast[msg.FromID]
 			switch msg.Cmd {
 			case "1": // 推文
+				// 检测是否有头像
+				if msg.Avatar != "" {
+					handleAvatar(msg.FromID, msg.FromName, fmt.Sprintf("%s%s", imgRoot, msg.Avatar), groupNums)
+				}
 				cqMsg := coolq.NewMessage()
 				section := coolq.NewTextSection(msg.Text)
 				cqMsg = coolq.AddSection(cqMsg, section)
@@ -149,22 +169,7 @@ func (_plugin Retweet) Load() error {
 				log.Println(logMsg)
 				logger.Service.AddLog(logger.LogTypeSuccess, logMsg)
 			case "2": // 头像
-				cqMsg := coolq.NewMessage()
-				name := msg.FromName
-				section := coolq.NewTextSection(fmt.Sprintf("%s 更新了头像\n", name))
-				cqMsg = coolq.AddSection(cqMsg, section)
-				imgSrc := fmt.Sprintf("%s%s", imgRoot, msg.Avatar)
-				log.Printf("头像地址：\n> %s\n", imgSrc)
-				section = coolq.NewImageSection(imgSrc)
-				cqMsg = coolq.AddSection(cqMsg, section)
-				cqMsgTxt := string(coolq.Marshal(cqMsg))
-				log.Printf("向酷Q发送：\n> %s\n", escapeCRLF(cqMsgTxt))
-				for _, groupID := range groupNums {
-					coolq.Client.SendGroupMsg(groupID, cqMsgTxt)
-				}
-				logMsg := fmt.Sprintf("成功转发了一条来自%s(%s)的头像更新信息", msg.FromName, msg.FromID)
-				log.Println(logMsg)
-				logger.Service.AddLog(logger.LogTypeSuccess, logMsg)
+				handleAvatar(msg.FromID, msg.FromName, fmt.Sprintf("%s%s", imgRoot, msg.Avatar), groupNums)
 			}
 		},
 		OnError: func(err error) {
