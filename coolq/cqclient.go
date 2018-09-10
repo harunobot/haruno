@@ -103,8 +103,8 @@ func (c *cqclient) registerAllPlugins() {
 }
 
 func (c *cqclient) Initialize() {
-	c.apiConn.Name = "ApiConn"
-	c.eventConn.Name = "EventConn"
+	c.apiConn.Name = "Api"
+	c.eventConn.Name = "Event"
 	c.registerAllPlugins()
 	// handle connect
 	c.apiConn.OnConnect = handleConnect
@@ -142,16 +142,22 @@ func (c *cqclient) Initialize() {
 
 	// 定时清理echo序列
 	go func() {
-		now := time.Now().Unix()
-		for echo, state := range c.echoqueue {
-			if state && now-echo > timeForWait {
-				logger.Service.AddLog(logger.LogTypeError, fmt.Sprintf("Echo = %d 响应超时(30s).", echo))
-				c.mu.Lock()
-				delete(c.echoqueue, echo)
-				c.mu.Unlock()
+		ticker := time.NewTicker(timeForWait * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				now := time.Now().Unix()
+				for echo, state := range c.echoqueue {
+					if state && now-echo > timeForWait {
+						logger.Service.AddLog(logger.LogTypeError, fmt.Sprintf("Echo = %d 响应超时(30s).", echo))
+						c.mu.Lock()
+						delete(c.echoqueue, echo)
+						c.mu.Unlock()
+					}
+				}
 			}
 		}
-		time.Sleep(timeForWait)
 	}()
 }
 

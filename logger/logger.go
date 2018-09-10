@@ -184,25 +184,31 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 	lock.Unlock()
 	go setupPong(conn, &lock)
 	conn.WriteJSON(welcome)
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 	for {
 		if !Service.conns[conn] {
 			return
 		}
-		ok, lg := Service.pop()
-		if !ok {
-			time.Sleep(time.Second)
-			continue
-		}
-		Service.writeToFile(lg)
-		for c, ok := range Service.conns {
+	SEND_LOGS:
+		select {
+		case <-ticker.C:
+			ok, lg := Service.pop()
 			if !ok {
-				continue
+				break SEND_LOGS
 			}
-			err := c.WriteJSON(lg)
-			if err != nil {
-				Service.conns[c] = false
+			Service.writeToFile(lg)
+			for c, ok := range Service.conns {
+				if !ok {
+					break SEND_LOGS
+				}
+				err := c.WriteJSON(lg)
+				if err != nil {
+					Service.conns[c] = false
+				}
 			}
 		}
+
 	}
 }
 

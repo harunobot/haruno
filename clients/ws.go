@@ -77,7 +77,6 @@ func (c *WSClient) Send(msgType int, msg []byte) error {
 		}
 		return err
 	}
-
 	return nil
 }
 
@@ -100,20 +99,24 @@ func (c *WSClient) onMsg(msg []byte) {
 func (c *WSClient) close() {
 	c.conn.Close()
 	c.closed = true
+	ticker := time.NewTicker(time.Second * 5)
+	defer ticker.Stop()
 	for {
-		if err := c.Dial(c.url, c.headers); err == nil {
-			break
+		select {
+		case <-ticker.C:
+			if err := c.Dial(c.url, c.headers); err == nil {
+				return
+			}
+			log.Println(c.Name, "has broken down, will reconnect after 5s.")
 		}
-		log.Println(c.Name, "has broken down, will reconnect after 5s.")
-		time.Sleep(time.Second * 5)
 	}
 }
 
 func (c *WSClient) setupPing() {
-	pingTicker := time.NewTicker(pingWaitTime)
+	pingTicker := time.NewTicker(time.Second * 5)
 	pingMsg := []byte("")
-	defer pingTicker.Stop()
 	go func() {
+		defer pingTicker.Stop()
 		for {
 			if c.closed {
 				return
@@ -121,6 +124,7 @@ func (c *WSClient) setupPing() {
 			select {
 			case <-pingTicker.C:
 				if c.Send(websocket.PingMessage, pingMsg) != nil {
+					c.close()
 					return
 				}
 			}
