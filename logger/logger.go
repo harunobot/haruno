@@ -24,7 +24,7 @@ const LogTypeError = 1
 // LogTypeSuccess 成功on类型
 const LogTypeSuccess = 2
 
-var logTypeStr = []string{"INFO", "ERROR", "SUCCESS"}
+var logTypeStr = []string{"info", "error", "success"}
 
 // Log log消息格式(json)
 type Log struct {
@@ -130,7 +130,7 @@ func (logger *loggerService) writeToFile(lg *Log) {
 	if err != nil {
 		log.Fatal("Logger", err)
 	}
-	logstr := fmt.Sprintf("%s - - \"%s\" - - \"%s\"\n", logTypeStr[lg.Type], logtime, lg.Text)
+	logstr := fmt.Sprintf("%s - - %s - - %s\n", logtime, logTypeStr[lg.Type], lg.Text)
 	defer fp.Close()
 	logger.mu.Lock()
 	fp.WriteString(logstr)
@@ -177,12 +177,13 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 		Service.AddLog(LogTypeError, err.Error())
 		return
 	}
-	Service.AddLog(LogTypeInfo, "Log websocket 服务连接成功")
+	welcome := NewLog(LogTypeInfo, "Logger服务连接成功!")
 	var lock sync.Mutex
 	lock.Lock()
 	Service.conns[conn] = true
 	lock.Unlock()
 	go setupPong(conn, &lock)
+	conn.WriteJSON(welcome)
 	for {
 		if !Service.conns[conn] {
 			return
