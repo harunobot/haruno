@@ -103,8 +103,8 @@ func (c *cqclient) registerAllPlugins() {
 }
 
 func (c *cqclient) Initialize() {
-	c.apiConn.Name = "Haruno Api Conn"
-	c.eventConn.Name = "Haruno Event Conn"
+	c.apiConn.Name = "ApiConn"
+	c.eventConn.Name = "EventConn"
 	c.registerAllPlugins()
 	// handle connect
 	c.apiConn.OnConnect = handleConnect
@@ -113,14 +113,14 @@ func (c *cqclient) Initialize() {
 	c.apiConn.OnError = handleError
 	c.eventConn.OnError = handleError
 	// handle message
-	c.apiConn.OnMessage = func(rmsg []byte) {
-		jmsg := make(map[string]interface{})
-		err := json.Unmarshal(rmsg, &jmsg)
+	c.apiConn.OnMessage = func(raw []byte) {
+		msg := new(CQWSResponse)
+		err := json.Unmarshal(raw, msg)
 		if err != nil {
 			logger.Service.AddLog(logger.LogTypeError, err.Error())
 			return
 		}
-		echo := jmsg["echo"].(int64)
+		echo := msg.Echo
 		if c.echoqueue[echo] {
 			c.mu.Lock()
 			delete(c.echoqueue, echo)
@@ -145,7 +145,7 @@ func (c *cqclient) Initialize() {
 		now := time.Now().Unix()
 		for echo, state := range c.echoqueue {
 			if state && now-echo > timeForWait {
-				logger.Service.AddLog(logger.LogTypeError, fmt.Sprintf("[%d]响应超时(30s).", echo))
+				logger.Service.AddLog(logger.LogTypeError, fmt.Sprintf("Echo = %d 响应超时(30s).", echo))
 				c.mu.Lock()
 				delete(c.echoqueue, echo)
 				c.mu.Unlock()
@@ -166,20 +166,34 @@ func (c *cqclient) Connect(url string, token string) {
 	c.eventConn.Dial(fmt.Sprintf("%s/event", url), headers)
 }
 
+// IsAPIOk api服务是否可用
+func (c *cqclient) IsAPIOk() bool {
+	return c.apiConn.IsConnected()
+}
+
+// IsEventOk event服务是否可用
+func (c *cqclient) IsEventOk() bool {
+	return c.eventConn.IsConnected()
+}
+
 func (c *cqclient) SendGroupMsg(groupID int64, message string) {
+	if !c.IsAPIOk() {
+		return
+	}
 	payload := &CQWSMessage{
 		Action: ActionSendGroupMsg,
 		Params: CQTypeSendGroupMsg{
 			GroupID: groupID,
 			Message: message,
 		},
+		Echo: time.Now().Unix(),
 	}
 	msg, _ := json.Marshal(payload)
 	c.apiConn.Send(websocket.TextMessage, msg)
 }
 
-// Default 唯一的酷q机器人实体
-var Default = &cqclient{
+// Client 唯一的酷q机器人实体
+var Client = &cqclient{
 	apiConn:       new(clients.WSClient),
 	eventConn:     new(clients.WSClient),
 	pluginEntries: make(map[string]pluginEntry),
