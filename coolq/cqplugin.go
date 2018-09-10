@@ -63,32 +63,34 @@ func (_plugin Plugin) HTTPHandlers() map[string]http.Handler {
 	return nil
 }
 
-// AllHTTPHanderFuncs 获取所有插件的 HandlerFunc
-func AllHTTPHanderFuncs() map[string]http.HandlerFunc {
+// AllHTTPHandlerFuncs 获取所有插件的 HandlerFunc
+func AllHTTPHandlerFuncs(routers *map[string]bool) map[string]http.HandlerFunc {
 	ret := make(map[string]http.HandlerFunc)
 	for _, _plugin := range entries {
 		pluginName := _plugin
 		funcs := _plugin.HTTPHandlerFuncs()
 		for routerPath, handlerFunc := range funcs {
-			if ret[routerPath] != nil {
+			if (*routers)[routerPath] {
 				log.Fatalf("Plugin: %s has a duplicate router (path: %s) HandlerFunc that is against others.\n", pluginName, routerPath)
 			}
+			(*routers)[routerPath] = true
 			ret[routerPath] = handlerFunc
 		}
 	}
 	return ret
 }
 
-// AllHTTPHandlers 获取所有插件的 HandlerFunc
-func AllHTTPHandlers() map[string]http.Handler {
+// AllHTTPHandlers 获取所有插件的 Handler
+func AllHTTPHandlers(routers *map[string]bool) map[string]http.Handler {
 	ret := make(map[string]http.Handler)
 	for _, _plugin := range entries {
 		pluginName := _plugin
 		funcs := _plugin.HTTPHandlers()
 		for routerPath, handlerFunc := range funcs {
-			if ret[routerPath] != nil {
+			if (*routers)[routerPath] {
 				log.Fatalf("Plugin: %s has a duplicate router (path: %s) Handler that is against others.\n", pluginName, routerPath)
 			}
+			(*routers)[routerPath] = true
 			ret[routerPath] = handlerFunc
 		}
 	}
