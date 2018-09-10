@@ -45,6 +45,9 @@ func Escape(txt string) string {
 func Marshal(msg Message) []byte {
 	buff := new(bytes.Buffer)
 	for _, section := range msg {
+		if buff.Len() > 0 {
+			buff.WriteString("\r\n")
+		}
 		switch section.Type {
 		case "text":
 			buff.WriteString(section.Data["text"])
