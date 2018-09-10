@@ -93,13 +93,13 @@ func (logger *loggerService) Fails() int {
 
 // Add 往队列里加入一个新的log
 func (logger *loggerService) Add(lg *Log) {
+	logger.muLog.Lock()
 	switch lg.Type {
 	case LogTypeSuccess:
 		logger.success++
 	case LogTypeError:
 		logger.fails++
 	}
-	logger.muLog.Lock()
 	logger.queue = append(logger.queue, lg)
 	logger.muLog.Unlock()
 }
@@ -177,12 +177,11 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 		Service.AddLog(LogTypeError, err.Error())
 		return
 	}
-	welcome := NewLog(LogTypeSuccess, "Log websocket 服务连接成功")
+	Service.AddLog(LogTypeInfo, "Log websocket 服务连接成功")
 	var lock sync.Mutex
 	lock.Lock()
 	Service.conns[conn] = true
 	lock.Unlock()
-	conn.WriteJSON(welcome)
 	go setupPong(conn, &lock)
 	for {
 		if !Service.conns[conn] {
