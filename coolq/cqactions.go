@@ -25,6 +25,7 @@ const (
 type CQWSMessage struct {
 	Action string      `json:"action"`
 	Params interface{} `json:"params"`
+	Echo   int64       `json:"echo"`
 }
 
 // CQTypeSendGroupMsg SendGroupMsg动作的数据类型
