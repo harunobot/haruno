@@ -107,11 +107,19 @@ func (_plugin Retweet) Load() error {
 				logger.Service.AddLog(logger.LogTypeError, err.Error())
 				return
 			}
+			if !coolq.Client.IsAPIOk() {
+				if msg.Cmd == "1" || msg.Cmd == "2" {
+					errMsg := fmt.Sprintf("A twitter message from %s was dropped(api hasn't been ok)", msg.FromName)
+					log.Println(errMsg)
+					logger.Service.AddLog(logger.LogTypeError, errMsg)
+				}
+				return
+			}
 			groupNums := _plugin.broadcast[msg.FromID]
-			switch msg.Status {
+			switch msg.Cmd {
 			case "1": // 推文
 				for _, groupID := range groupNums {
-					coolq.Default.SendGroupMsg(groupID, msg.Text)
+					coolq.Client.SendGroupMsg(groupID, msg.Text)
 				}
 			case "2": // 头像
 				cqMsg := make(coolq.Message, 0)
@@ -123,7 +131,7 @@ func (_plugin Retweet) Load() error {
 				cqMsg = append(cqMsg, section)
 				data := coolq.Marshal(cqMsg)
 				for _, groupID := range groupNums {
-					coolq.Default.SendGroupMsg(groupID, string(data))
+					coolq.Client.SendGroupMsg(groupID, string(data))
 				}
 			}
 		},
