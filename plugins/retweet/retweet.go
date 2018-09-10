@@ -20,6 +20,7 @@ type Retweet struct {
 	url       string
 	version   string
 	broadcast map[string][]int64
+	imageRoot string
 	conn      *clients.WSClient
 }
 
@@ -63,6 +64,7 @@ func (_plugin *Retweet) loadConfig() error {
 	pcfg := cfg.Retweet
 	_plugin.name = pcfg.Name
 	_plugin.url = pcfg.URL
+	_plugin.imageRoot = pcfg.ImageRoot
 	_plugin.version = pcfg.Version
 	_plugin.broadcast = make(map[string][]int64)
 	// 确定广播组
@@ -93,6 +95,7 @@ func (_plugin Retweet) Load() error {
 	if err != nil {
 		return err
 	}
+	imgRoot := _plugin.imageRoot
 	_plugin.conn = &clients.WSClient{
 		Name: "Retweet Plugin",
 		OnConnect: func(conn *clients.WSClient) {
@@ -116,23 +119,41 @@ func (_plugin Retweet) Load() error {
 				return
 			}
 			groupNums := _plugin.broadcast[msg.FromID]
+
 			switch msg.Cmd {
 			case "1": // 推文
-				for _, groupID := range groupNums {
-					coolq.Client.SendGroupMsg(groupID, msg.Text)
+				cqMsg := coolq.NewMessage()
+				section := coolq.NewTextSection(msg.Text)
+				cqMsg = coolq.AddSection(cqMsg, section)
+				for _, img := range msg.Imgs {
+					imgSrc := fmt.Sprintf("%s%s", imgRoot, img)
+					log.Printf("包含图片：\n> %s\n", imgSrc)
+					section = coolq.NewImageSection(imgSrc)
+					cqMsg = coolq.AddSection(cqMsg, section)
 				}
+				cqMsgTxt := string(coolq.Marshal(cqMsg))
+				for _, groupID := range groupNums {
+					coolq.Client.SendGroupMsg(groupID, cqMsgTxt)
+				}
+				logMsg := fmt.Sprintf("成功转发了一条来自%s(%s)的推文", msg.FromName, msg.FromID)
+				log.Println(logMsg)
+				logger.Service.AddLog(logger.LogTypeSuccess, logMsg)
 			case "2": // 头像
-				cqMsg := make(coolq.Message, 0)
+				cqMsg := coolq.NewMessage()
 				name := msg.FromName
 				section := coolq.NewTextSection(fmt.Sprintf("%s 更新了头像\n", name))
-				cqMsg = append(cqMsg, section)
-				avatar := msg.Avatar
-				section = coolq.NewImageSection(avatar)
-				cqMsg = append(cqMsg, section)
-				data := coolq.Marshal(cqMsg)
+				cqMsg = coolq.AddSection(cqMsg, section)
+				imgSrc := fmt.Sprintf("%s%s", imgRoot, msg.Avatar)
+				log.Printf("头像地址：\n> %s\n", imgSrc)
+				section = coolq.NewImageSection(imgSrc)
+				cqMsg = coolq.AddSection(cqMsg, section)
+				cqMsgTxt := string(coolq.Marshal(cqMsg))
 				for _, groupID := range groupNums {
-					coolq.Client.SendGroupMsg(groupID, string(data))
+					coolq.Client.SendGroupMsg(groupID, cqMsgTxt)
 				}
+				logMsg := fmt.Sprintf("成功转发了一条来自%s(%s)的头像更新信息", msg.FromName, msg.FromID)
+				log.Println(logMsg)
+				logger.Service.AddLog(logger.LogTypeSuccess, logMsg)
 			}
 		},
 		OnError: func(err error) {

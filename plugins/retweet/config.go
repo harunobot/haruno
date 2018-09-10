@@ -11,6 +11,7 @@ type Cfg struct {
 	URL       string      `toml:"url"`
 	Version   string      `toml:"version"`
 	Broadcast []Broadcast `toml:"broadcast"`
+	ImageRoot string      `toml:"imageRoot"`
 }
 
 // Broadcast 消息广播配置
