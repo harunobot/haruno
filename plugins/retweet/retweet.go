@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
 
 	"github.com/haruno-bot/haruno/logger"
 
@@ -89,12 +90,21 @@ func (_plugin *Retweet) loadConfig() error {
 	return nil
 }
 
+func escapeCRLF(s string) string {
+	cr, _ := regexp.Compile(`\r`)
+	lf, _ := regexp.Compile(`\n`)
+	s = cr.ReplaceAllString(s, "\\r")
+	s = lf.ReplaceAllString(s, "\\n")
+	return s
+}
+
 // Load 插件加载
 func (_plugin Retweet) Load() error {
 	err := _plugin.loadConfig()
 	if err != nil {
 		return err
 	}
+
 	imgRoot := _plugin.imageRoot
 	_plugin.conn = &clients.WSClient{
 		Name: "Retweet Plugin",
@@ -119,7 +129,6 @@ func (_plugin Retweet) Load() error {
 				return
 			}
 			groupNums := _plugin.broadcast[msg.FromID]
-
 			switch msg.Cmd {
 			case "1": // 推文
 				cqMsg := coolq.NewMessage()
@@ -132,6 +141,7 @@ func (_plugin Retweet) Load() error {
 					cqMsg = coolq.AddSection(cqMsg, section)
 				}
 				cqMsgTxt := string(coolq.Marshal(cqMsg))
+				log.Printf("向酷Q发送：\n> %s\n", escapeCRLF(cqMsgTxt))
 				for _, groupID := range groupNums {
 					coolq.Client.SendGroupMsg(groupID, cqMsgTxt)
 				}
@@ -148,6 +158,7 @@ func (_plugin Retweet) Load() error {
 				section = coolq.NewImageSection(imgSrc)
 				cqMsg = coolq.AddSection(cqMsg, section)
 				cqMsgTxt := string(coolq.Marshal(cqMsg))
+				log.Printf("向酷Q发送：\n> %s\n", escapeCRLF(cqMsgTxt))
 				for _, groupID := range groupNums {
 					coolq.Client.SendGroupMsg(groupID, cqMsgTxt)
 				}
