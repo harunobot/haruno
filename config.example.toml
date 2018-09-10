@@ -6,3 +6,14 @@ serverPort = 8080 # 服务端口号
 cqWSURL = "ws_url"
 cqHTTPURL = "http_url"
 cqToken = "token"
+
+# 转推
+[retweet]
+version = "0.0.1"
+name = "haruno-plugin-retweet"
+imageRoot = "/path/to"
+url = "twitter_api_url"
+  [[retweet.broadcast]]
+    account = "123456"
+    accounts = ["123456"]
+    groupNums = [123456]
