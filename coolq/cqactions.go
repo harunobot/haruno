@@ -28,6 +28,14 @@ type CQWSMessage struct {
 	Echo   int64       `json:"echo"`
 }
 
+// CQWSResponse coolq ws响应类型
+type CQWSResponse struct {
+	Status  string      `json:"status"`
+	RetCode int         `json:"retcode"`
+	Data    interface{} `json:"data"`
+	Echo    int64       `json:"echo"`
+}
+
 // CQTypeSendGroupMsg SendGroupMsg动作的数据类型
 type CQTypeSendGroupMsg struct {
 	GroupID    int64  `json:"group_id"`
