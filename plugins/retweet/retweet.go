@@ -149,7 +149,7 @@ func (_plugin Retweet) Load() error {
 			case "1": // 推文
 				// 检测是否有头像
 				if msg.Avatar != "" {
-					handleAvatar(msg.FromID, msg.FromName, fmt.Sprintf("%s%s", imgRoot, msg.Avatar), groupNums)
+					go handleAvatar(msg.FromID, msg.FromName, fmt.Sprintf("%s%s", imgRoot, msg.Avatar), groupNums)
 				}
 				cqMsg := coolq.NewMessage()
 				section := coolq.NewTextSection(msg.Text)
