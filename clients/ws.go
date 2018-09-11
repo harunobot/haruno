@@ -24,6 +24,7 @@ type WSClient struct {
 	conn      *websocket.Conn
 	url       string
 	closed    bool
+	dialer    *websocket.Dialer
 	mu        sync.Mutex
 }
 
@@ -35,8 +36,13 @@ func (c *WSClient) Dial(url string, headers http.Header) error {
 	if c.Name == "" {
 		c.Name = "Websocket"
 	}
+	if c.dialer == nil {
+		c.dialer = &websocket.Dialer{
+			Proxy: http.ProxyFromEnvironment,
+		}
+	}
 	var err error
-	c.conn, _, err = websocket.DefaultDialer.Dial(url, headers)
+	c.conn, _, err = c.dialer.Dial(url, headers)
 	if err != nil {
 		return err
 	}
@@ -44,21 +50,21 @@ func (c *WSClient) Dial(url string, headers http.Header) error {
 	if c.OnConnect != nil {
 		go c.OnConnect(c)
 	}
+	quit := make(chan int)
 	go func() {
-		defer c.close()
-
 		for {
 			var msg []byte
 			if _, msg, err = c.conn.ReadMessage(); err != nil {
 				if c.OnError != nil {
 					go c.OnError(err)
 				}
+				close(quit)
 				return
 			}
 			c.onMsg(msg)
 		}
 	}()
-	c.setupPing()
+	c.setupPing(quit)
 	return nil
 }
 
@@ -97,35 +103,35 @@ func (c *WSClient) onMsg(msg []byte) {
 }
 
 func (c *WSClient) close() {
-	c.conn.Close()
+	if c.conn != nil {
+		c.conn.Close()
+	}
 	c.closed = true
-	ticker := time.NewTicker(time.Second * 5)
-	defer ticker.Stop()
 	for {
-		select {
-		case <-ticker.C:
-			if err := c.Dial(c.url, c.headers); err == nil {
-				return
-			}
-			log.Println(c.Name, "has broken down, will reconnect after 5s.")
+		if err := c.Dial(c.url, c.headers); err == nil {
+			return
 		}
+		log.Println(c.Name, "has broken down, will reconnect after 5s.")
+		time.Sleep(time.Second * 5)
 	}
 }
 
-func (c *WSClient) setupPing() {
+func (c *WSClient) setupPing(quit chan int) {
 	pingTicker := time.NewTicker(time.Second * 5)
 	pingMsg := []byte("")
 	go func() {
 		defer pingTicker.Stop()
+		defer c.close()
 		for {
 			if c.closed {
 				return
 			}
 			select {
+			case <-quit:
+				return
 			case <-pingTicker.C:
 				if c.Send(websocket.PingMessage, pingMsg) != nil {
-					c.close()
-					return
+					close(quit)
 				}
 			}
 		}
