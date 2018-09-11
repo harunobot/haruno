@@ -49,14 +49,16 @@ type loggerService struct {
 	fails    int
 	logsPath string
 	queue    []*Log
-	mu       sync.Mutex
-	muLog    sync.Mutex
+	lgChan   chan int64
+	wLock    sync.Mutex
+	lgLock   sync.Mutex
+	cpLock   sync.Mutex
 }
 
 // 时间格式等基本的常量
 const logDateFormat = "2006-01-02"
 const logTimeFormat = "2006-01-02 15:04:05 -0700"
-const pingWaitTime = 5 * time.Second
+const pongWaitTime = 5 * time.Second
 
 // Service 单例实体
 var Service loggerService
@@ -93,7 +95,7 @@ func (logger *loggerService) Fails() int {
 
 // Add 往队列里加入一个新的log
 func (logger *loggerService) Add(lg *Log) {
-	logger.muLog.Lock()
+	logger.lgLock.Lock()
 	switch lg.Type {
 	case LogTypeSuccess:
 		logger.success++
@@ -101,7 +103,10 @@ func (logger *loggerService) Add(lg *Log) {
 		logger.fails++
 	}
 	logger.queue = append(logger.queue, lg)
-	logger.muLog.Unlock()
+	logger.lgLock.Unlock()
+	go func() {
+		logger.lgChan <- lg.Time
+	}()
 }
 
 // AddLog 往队列里加入一个新的log
@@ -116,9 +121,9 @@ func (logger *loggerService) pop() (bool, *Log) {
 		return false, nil
 	}
 	lg := logger.queue[0]
-	logger.muLog.Lock()
+	logger.lgLock.Lock()
 	logger.queue = logger.queue[1:]
-	logger.muLog.Unlock()
+	logger.lgLock.Unlock()
 	return true, lg
 }
 
@@ -132,33 +137,39 @@ func (logger *loggerService) writeToFile(lg *Log) {
 	}
 	logstr := fmt.Sprintf("%s - - %s - - %s\n", logtime, logTypeStr[lg.Type], lg.Text)
 	defer fp.Close()
-	logger.mu.Lock()
+	logger.wLock.Lock()
 	fp.WriteString(logstr)
-	logger.mu.Unlock()
+	logger.wLock.Unlock()
 }
 
-func setupPong(conn *websocket.Conn, lock *sync.Mutex) {
-	pingTicker := time.NewTicker(pingWaitTime)
-	defer func() {
-		pingTicker.Stop()
-		lock.Lock()
-		delete(Service.conns, conn)
-		lock.Unlock()
-		conn.Close()
-	}()
+func delconn(conn *websocket.Conn) {
+	Service.cpLock.Lock()
+	delete(Service.conns, conn)
+	Service.cpLock.Unlock()
+}
+
+func setupPong(conn *websocket.Conn, quit chan int) {
+	pongTicker := time.NewTicker(pongWaitTime)
 	pongMsg := []byte("")
-	for {
-		if Service.conns[conn] != true {
-			return
-		}
-		select {
-		case <-pingTicker.C:
-			conn.SetWriteDeadline(time.Now().Add(pingWaitTime))
-			if err := conn.WriteMessage(websocket.PingMessage, pongMsg); err != nil {
+	go func() {
+		defer pongTicker.Stop()
+		defer conn.Close()
+		defer delconn(conn)
+		for {
+			if Service.conns[conn] != true {
+				close(quit)
+			}
+			select {
+			case <-quit:
 				return
+			case <-pongTicker.C:
+				conn.SetWriteDeadline(time.Now().Add(pongWaitTime))
+				if err := conn.WriteMessage(websocket.PongMessage, pongMsg); err != nil {
+					close(quit)
+				}
 			}
 		}
-	}
+	}()
 }
 
 const (
@@ -178,33 +189,35 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	welcome := NewLog(LogTypeInfo, "Logger服务连接成功!")
-	var lock sync.Mutex
-	lock.Lock()
+	Service.cpLock.Lock()
 	Service.conns[conn] = true
-	lock.Unlock()
-	go setupPong(conn, &lock)
+	Service.cpLock.Unlock()
+	quit := make(chan int)
+	setupPong(conn, quit)
 	conn.WriteJSON(welcome)
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
 	for {
 		if !Service.conns[conn] {
+			close(quit)
 			return
 		}
-	SEND_LOGS:
 		select {
-		case <-ticker.C:
+		case <-quit:
+			return
+		case <-Service.lgChan:
 			ok, lg := Service.pop()
 			if !ok {
-				break SEND_LOGS
+				break
 			}
 			Service.writeToFile(lg)
 			for c, ok := range Service.conns {
 				if !ok {
-					break SEND_LOGS
+					continue
 				}
 				err := c.WriteJSON(lg)
 				if err != nil {
+					Service.cpLock.Lock()
 					Service.conns[c] = false
+					Service.cpLock.Unlock()
 				}
 			}
 		}
@@ -259,25 +272,27 @@ func RawLogHandler(w http.ResponseWriter, r *http.Request) {
 
 func (logger *loggerService) setupTransaction() {
 	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			ok, logMsg := logger.pop()
-			cleanup := false
-			if ok {
-				log.Printf("Log queue (%d) will be cleaned up.\n", len(logger.queue)+1)
-			}
-			for ok {
-				cleanup = true
-				logger.writeToFile(logMsg)
-				ok, logMsg = logger.pop()
-			}
-			if cleanup {
-				log.Println("Log queue has been cleaned up.")
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				ok, logMsg := logger.pop()
+				cleanup := false
+				if ok {
+					log.Printf("Log queue (%d) will be cleaned up.\n", len(logger.queue)+1)
+				}
+				for ok {
+					cleanup = true
+					logger.writeToFile(logMsg)
+					ok, logMsg = logger.pop()
+				}
+				if cleanup {
+					log.Println("Log queue has been cleaned up.")
+				}
 			}
 		}
-	}
+	}()
 }
 
 // Initialize 初始化logger服务
@@ -300,6 +315,7 @@ func (logger *loggerService) Initialize() {
 		}
 	}
 	// 创建连接池
-	Service.conns = make(map[*websocket.Conn]bool)
-	go logger.setupTransaction()
+	logger.conns = make(map[*websocket.Conn]bool)
+	logger.lgChan = make(chan int64)
+	logger.setupTransaction()
 }
