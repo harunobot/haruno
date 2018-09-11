@@ -108,8 +108,8 @@ func handleAvatar(id, name, url string, groupNums []int64) {
 	section = coolq.NewImageSection(url)
 	cqMsg = coolq.AddSection(cqMsg, section)
 	cqMsgTxt := string(coolq.Marshal(cqMsg))
-	logMsg = fmt.Sprintf("向酷Q发送： %s", escapeCRLF(cqMsgTxt))
-	log.Println(logMsg)
+	logMsg = fmt.Sprintf("向酷Q发送： %s", cqMsgTxt)
+	log.Println(escapeCRLF(logMsg))
 	logger.Service.AddLog(logger.LogTypeInfo, logMsg)
 	for _, groupID := range groupNums {
 		coolq.Client.SendGroupMsg(groupID, cqMsgTxt)
@@ -168,8 +168,8 @@ func (_plugin Retweet) Load() error {
 					cqMsg = coolq.AddSection(cqMsg, section)
 				}
 				cqMsgTxt := string(coolq.Marshal(cqMsg))
-				logMsg := fmt.Sprintf("向酷Q发送：%s", escapeCRLF(cqMsgTxt))
-				log.Println(logMsg)
+				logMsg := fmt.Sprintf("向酷Q发送：%s", cqMsgTxt)
+				log.Println(escapeCRLF(logMsg))
 				logger.Service.AddLog(logger.LogTypeInfo, logMsg)
 				for _, groupID := range groupNums {
 					coolq.Client.SendGroupMsg(groupID, cqMsgTxt)
