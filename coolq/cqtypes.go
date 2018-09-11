@@ -163,3 +163,28 @@ func NewImageSection(src string) Section {
 		},
 	}
 }
+
+// 事件上报数据格式定义
+
+// QAnonymous QQ匿名消息格式
+type QAnonymous struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Flag string `json:"flag"`
+}
+
+// CQEvent coolq事件上报格式
+type CQEvent struct {
+	Anonymous   QAnonymous `json:"anonymous"`
+	Font        int64      `json:"font"`
+	GroupID     int64      `json:"group_id"`
+	Message     string     `json:"message"`
+	MessageID   int64      `json:"message_id"`
+	MessageType string     `json:"message_type"`
+	PostType    string     `json:"post_type"`
+	RawMessage  string     `json:"raw_message"`
+	SelfID      int64      `json:"self_id"`
+	SubType     string     `json:"sub_type"`
+	Time        int64      `json:"time"`
+	UserID      int64      `json:"user_id"`
+}

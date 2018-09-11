@@ -19,10 +19,10 @@ const timeForWait = 30
 const noFilterKey = "__DO_NOT_SET_UNUSED_KEY__"
 
 // Filter 过滤函数
-type Filter func([]byte) bool
+type Filter func(*CQEvent) bool
 
 // Handler 处理函数
-type Handler func([]byte)
+type Handler func(*CQEvent)
 
 type pluginEntry struct {
 	fitlers  map[string]Filter
@@ -87,9 +87,9 @@ func (c *cqclient) registerAllPlugins() {
 				noFilterHanlers = append(noFilterHanlers, handler)
 			}
 		}
-		entry.handlers[noFilterKey] = func(data []byte) {
+		entry.handlers[noFilterKey] = func(event *CQEvent) {
 			for _, hanldeFunc := range noFilterHanlers {
-				hanldeFunc(data)
+				hanldeFunc(event)
 			}
 		}
 		c.pluginEntries[pluginName] = entry
@@ -129,12 +129,20 @@ func (c *cqclient) Initialize() {
 	}
 	// handle events
 	c.eventConn.OnMessage = func(raw []byte) {
+		event := new(CQEvent)
+		err := json.Unmarshal(raw, event)
+		if err != nil {
+			errMsg := err.Error()
+			log.Panicln(errMsg)
+			logger.Service.AddLog(logger.LogTypeError, errMsg)
+			return
+		}
 		for _, entry := range c.pluginEntries {
-			entry.handlers[noFilterKey](raw)
+			entry.handlers[noFilterKey](event)
 			for key, filterFunc := range entry.fitlers {
 				handleFunc := entry.handlers[key]
-				if filterFunc(raw) {
-					handleFunc(raw)
+				if filterFunc(event) {
+					handleFunc(event)
 				}
 			}
 		}
