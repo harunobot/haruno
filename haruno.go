@@ -98,22 +98,6 @@ func (bot *haruno) Run() {
 	http.HandleFunc("/logs/-/type=websocket", logger.WSLogHandler)
 	http.HandleFunc("/logs/-/type=plain", logger.RawLogHandler)
 
-	routers := map[string]bool{
-		"/status":                true,
-		"/logs/-/type=websocket": true,
-		"/logs/-/type=plain":     true,
-	}
-
-	pluginHanlers := coolq.AllHTTPHandlers(&routers)
-	for routerPath, HTTPHandler := range pluginHanlers {
-		http.Handle(routerPath, HTTPHandler)
-	}
-
-	pluginHandlerFuncs := coolq.AllHTTPHandlerFuncs(&routers)
-	for routerPath, HandlerFunc := range pluginHandlerFuncs {
-		http.HandleFunc(routerPath, HandlerFunc)
-	}
-
 	addr := fmt.Sprintf("127.0.0.1:%d", bot.port)
 	log.Printf("Haruno server works on http://%s.\n", addr)
 	err := http.ListenAndServe(addr, nil)
