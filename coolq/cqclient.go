@@ -41,7 +41,7 @@ type cqclient struct {
 
 func handleConnect(conn *clients.WSClient) {
 	if conn.IsConnected() {
-		msgText := fmt.Sprintf("酷Q机器人%s服务已成功连接！", conn.Name)
+		msgText := fmt.Sprintf("%s服务已成功连接！", conn.Name)
 		log.Println(msgText)
 		logger.Service.AddLog(logger.LogTypeInfo, msgText)
 	}
@@ -103,8 +103,8 @@ func (c *cqclient) registerAllPlugins() {
 }
 
 func (c *cqclient) Initialize() {
-	c.apiConn.Name = "Api"
-	c.eventConn.Name = "Event"
+	c.apiConn.Name = "酷Q机器人Api"
+	c.eventConn.Name = "酷Q机器人Event"
 	c.registerAllPlugins()
 	// handle connect
 	c.apiConn.OnConnect = handleConnect
