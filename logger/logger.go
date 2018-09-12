@@ -283,6 +283,11 @@ func (logger *loggerService) setupTransaction() {
 					log.Printf("Log queue (%d) will be cleaned up.\n", len(logger.queue)+1)
 				}
 				for ok {
+					// 清空管道
+					select {
+					case <-logger.lgChan:
+					default:
+					}
 					cleanup = true
 					logger.writeToFile(logMsg)
 					ok, logMsg = logger.pop()
