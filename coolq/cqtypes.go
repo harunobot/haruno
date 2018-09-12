@@ -72,7 +72,7 @@ func Unmarshal(raw []byte, msg *Message) error {
 	for idx < tot {
 		if raw[idx] != '[' {
 			cur = idx
-			for raw[cur] != '[' && cur < tot {
+			for cur < tot && raw[cur] != '[' {
 				cur++
 			}
 			section := Section{
@@ -84,7 +84,7 @@ func Unmarshal(raw []byte, msg *Message) error {
 			idx = cur
 		} else {
 			cur = idx
-			for raw[cur] != ']' && cur < tot {
+			for cur < tot && raw[cur] != ']' {
 				cur++
 			}
 			if cur == tot {
@@ -112,12 +112,7 @@ func Unmarshal(raw []byte, msg *Message) error {
 			}
 			for i := 1; i < filedLen; i++ {
 				pair := strings.Split(payloads[i], "=")
-				if len(pair) != 2 {
-					msg = nil
-					errMsg := fmt.Sprintf("syntax error: invalid cqcode, wrong argument, at %s", payloads[i])
-					return errors.New(errMsg)
-				}
-				section.Data[pair[0]] = pair[1]
+				section.Data[pair[0]] = strings.Join(pair[1:], "")
 			}
 			*msg = append(*msg, section)
 			idx = cur
