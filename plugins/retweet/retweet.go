@@ -27,7 +27,7 @@ type Retweet struct {
 
 // Name 插件名称
 func (_plugin Retweet) Name() string {
-	return _plugin.name
+	return fmt.Sprintf("%s@%s", _plugin.name, _plugin.version)
 }
 
 func removeRepeatedString(arr []string) []string {
