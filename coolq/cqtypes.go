@@ -80,7 +80,7 @@ func Unmarshal(raw []byte, msg *Message) error {
 				Data: map[string]string{},
 			}
 			section.Data["text"] = string(raw[idx:cur])
-			*msg = append(*msg, section)
+			*msg = AddSection(*msg, section)
 			idx = cur
 		} else {
 			cur = idx
@@ -114,7 +114,7 @@ func Unmarshal(raw []byte, msg *Message) error {
 				pair := strings.Split(payloads[i], "=")
 				section.Data[pair[0]] = strings.Join(pair[1:], "")
 			}
-			*msg = append(*msg, section)
+			*msg = AddSection(*msg, section)
 			idx = cur
 		}
 	}

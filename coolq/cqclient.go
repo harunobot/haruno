@@ -16,7 +16,7 @@ import (
 
 const timeForWait = 30
 
-const noFilterKey = "__DO_NOT_SET_UNUSED_KEY__"
+const noFilterKey = "__NEVER_SET_UNUSED_KEY__"
 
 // Filter 过滤函数
 type Filter func(*CQEvent) bool
@@ -95,11 +95,9 @@ func (c *cqclient) registerAllPlugins() {
 		c.pluginEntries[pluginName] = entry
 	}
 	// 触发所有插件的onload事件
-	go func() {
-		for _, plug := range entries {
-			plug.OnLoad()
-		}
-	}()
+	for _, plug := range entries {
+		go plug.Loaded()
+	}
 }
 
 func (c *cqclient) Initialize() {

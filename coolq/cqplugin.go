@@ -10,7 +10,7 @@ type pluginInterface interface {
 	Load() error
 	Filters() map[string]Filter
 	Handlers() map[string]Handler
-	OnLoad()
+	Loaded()
 }
 
 // PluginRegister 插件注册
@@ -24,7 +24,7 @@ type Plugin struct {
 
 // Name 获取插件名字
 func (_plugin Plugin) Name() string {
-	return "__PLUGIN__"
+	return "__UNNAMED_PLUGIN__"
 }
 
 // Load 插件加载
@@ -42,6 +42,6 @@ func (_plugin Plugin) Handlers() map[string]Handler {
 	return nil
 }
 
-// OnLoad 加载完成的事件
-func (_plugin Plugin) OnLoad() {
+// Loaded 加载完成的事件
+func (_plugin Plugin) Loaded() {
 }
