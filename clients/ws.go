@@ -13,7 +13,7 @@ import (
 const pingWaitTime = time.Second * 5
 
 // WSClient 拓展的websocket客户端，可以自动重连
-// 这个没有默认的客户端，但是不建议另开客户端
+// 这个没有默认的客户端
 type WSClient struct {
 	Name      string
 	OnMessage func([]byte)
