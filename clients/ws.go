@@ -61,7 +61,7 @@ func (c *WSClient) Dial(url string, headers http.Header) error {
 				close(quit)
 				return
 			}
-			c.onMsg(msg)
+			go c.onMsg(msg)
 		}
 	}()
 	c.setupPing(quit)
