@@ -6,9 +6,3 @@ serverPort = 8080 # 服务端口号
 cqWSURL = "ws_url"
 cqHTTPURL = "http_url"
 cqToken = "token"
-
-[turing]
-version = "0.0.1"
-name = "haruno-plugin-turing"
-groupNums = [123456, 123456]
-token = "123456789abcdef"
