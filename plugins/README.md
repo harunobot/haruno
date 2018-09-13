@@ -42,7 +42,7 @@ type pluginInterface interface {
 
 ![处理上报事件数据的过程](https://miao.su/images/2018/09/13/c1496e9cd0a0c6874fdf1.png)
 
-事件一次经过每一个filter，如果通过则异步调用handler。
+事件一次经过每一个filter，如果通过则异步调用handler。
 
 每一个插件都可以设置多个匹配的key来对应不同的匹配结果。这个是自己根据需求设置的。
 
@@ -76,7 +76,7 @@ type MyPlugin struct {
 
 > 并不是同步的日志，即使是websocket方式，也是要通过管道发送。
 
-日志会每隔30s清空队列，并持久化。
+日志会每隔30s清空队列，并持久化。
 
 基本使用方法：
 
