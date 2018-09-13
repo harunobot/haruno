@@ -11,5 +11,4 @@ debug
 config.toml
 
 # static files
-
 server/*
