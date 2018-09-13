@@ -65,8 +65,8 @@ func (bot *haruno) Initialize() {
 	logger.Service.SetLogsPath(bot.logpath)
 	logger.Service.Initialize()
 	plugins.SetupPlugins()
-	coolq.Client.Initialize()
-	go coolq.Client.Connect(bot.cqWSURL, bot.cqToken)
+	coolq.Client.Initialize(bot.cqToken)
+	coolq.Client.Connect(bot.cqWSURL, bot.cqHTTPURL)
 }
 
 // Status 运行状态json格式

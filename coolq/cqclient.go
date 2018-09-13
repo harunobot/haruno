@@ -33,8 +33,11 @@ type pluginEntry struct {
 // 为了安全起见，暂时不允许在包外额外创建
 type cqclient struct {
 	mu            sync.Mutex
+	token         string
 	apiConn       *clients.WSClient
 	eventConn     *clients.WSClient
+	httpConn      *clients.HTTPClient
+	apiURL        string
 	pluginEntries map[string]pluginEntry
 	echoqueue     map[int64]bool
 }
@@ -100,7 +103,13 @@ func (c *cqclient) registerAllPlugins() {
 	}
 }
 
-func (c *cqclient) Initialize() {
+// Initialize 初始化客户端
+// token 酷q机器人的access token
+func (c *cqclient) Initialize(token string) {
+	c.token = token
+	c.httpConn = clients.NewHTTPClient("")
+	c.httpConn.Header.Set("Authorization", fmt.Sprintf("Token %s", c.token))
+
 	c.apiConn.Name = "酷Q机器人Api"
 	c.eventConn.Name = "酷Q机器人Event"
 	c.registerAllPlugins()
@@ -112,7 +121,7 @@ func (c *cqclient) Initialize() {
 	c.eventConn.OnError = handleError
 	// handle message
 	c.apiConn.OnMessage = func(raw []byte) {
-		msg := new(CQWSResponse)
+		msg := new(CQResponse)
 		err := json.Unmarshal(raw, msg)
 		if err != nil {
 			logger.Service.AddLog(logger.LogTypeError, err.Error())
@@ -168,14 +177,15 @@ func (c *cqclient) Initialize() {
 }
 
 // Connect 连接远程酷q api服务
-// url 形如 ws://127.0.0.1:8080, wss://127.0.0.1:8080之类的url
-// token 酷q机器人的access token
-func (c *cqclient) Connect(url string, token string) {
+// wsURL 形如 ws://127.0.0.1:8080, wss://127.0.0.1:8080之类的url 用于建立ws连接
+// httpURL 形如 http://127.0.0.1:8080之类的url 用户建立http”连接“
+func (c *cqclient) Connect(wsURL, httpURL string) {
 	headers := make(http.Header)
-	headers.Add("Authorization", fmt.Sprintf("Token %s", token))
+	headers.Add("Authorization", fmt.Sprintf("Token %s", c.token))
 	// 连接api服务和事件服务
-	c.apiConn.Dial(fmt.Sprintf("%s/api", url), headers)
-	c.eventConn.Dial(fmt.Sprintf("%s/event", url), headers)
+	c.apiConn.Dial(fmt.Sprintf("%s/api", wsURL), headers)
+	c.eventConn.Dial(fmt.Sprintf("%s/event", wsURL), headers)
+	c.apiURL = httpURL
 }
 
 // IsAPIOk api服务是否可用
@@ -188,6 +198,8 @@ func (c *cqclient) IsEventOk() bool {
 	return c.eventConn.IsConnected()
 }
 
+// SendGroupMsg 发送群消息
+// websocket 接口
 func (c *cqclient) SendGroupMsg(groupID int64, message string) {
 	if !c.IsAPIOk() {
 		return
@@ -202,6 +214,48 @@ func (c *cqclient) SendGroupMsg(groupID int64, message string) {
 	}
 	msg, _ := json.Marshal(payload)
 	c.apiConn.Send(websocket.TextMessage, msg)
+}
+
+func warnHTTPApiURLNotSet() {
+	log.Println("[WARNING] Try to request a http api url, but no http api url was set.")
+}
+
+// GetStatus 获取插件运行状态
+// http 接口
+func (c *cqclient) GetStatus() *CQTypeGetStatus {
+	if c.apiURL == "" {
+		warnHTTPApiURLNotSet()
+		return nil
+	}
+	url := fmt.Sprintf("%s%s", c.apiURL, ActionGetStatus)
+	res, err := c.httpConn.Get(url)
+	if err != nil {
+		errMsg := err.Error()
+		fmt.Println(errMsg)
+		logger.Service.AddLog(logger.LogTypeError, errMsg)
+		return nil
+	}
+	defer res.Body.Close()
+	response := new(CQResponse)
+	err = json.NewDecoder(res.Body).Decode(response)
+	if err != nil {
+		errMsg := err.Error()
+		fmt.Println(errMsg)
+		logger.Service.AddLog(logger.LogTypeError, errMsg)
+		return nil
+	}
+	if response.RetCode != 0 {
+		return nil
+	}
+	data := response.Data.(map[string]interface{})
+	status := new(CQTypeGetStatus)
+	status.AppInitialized = data["app_initialized"].(bool)
+	status.AppEnabled = data["app_enabled"].(bool)
+	status.PluginsGood = data["plugins_good"].(bool)
+	status.AppGood = data["app_good"].(bool)
+	status.Online = data["online"].(bool)
+	status.Good = data["good"].(bool)
+	return status
 }
 
 // Client 唯一的酷q机器人实体
