@@ -14,9 +14,9 @@ type HTTPClient struct {
 	Header http.Header
 }
 
-// Default 默认的http客户端
+// DefaultHTTPClient 默认的http客户端
 // 建议没有特殊需求的功能都使用这个客户端
-var Default = NewHTTPClient("")
+var DefaultHTTPClient = NewHTTPClient("")
 
 // NewHTTPClient 创建新的 http client 客户端
 // proxyURL 客户端代理 proxy: socks or http
