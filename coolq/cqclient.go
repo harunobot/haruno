@@ -220,6 +220,10 @@ func warnHTTPApiURLNotSet() {
 	log.Println("[WARNING] Try to request a http api url, but no http api url was set.")
 }
 
+func (c *cqclient) getAPIURL(api string) string {
+	return fmt.Sprintf("%s/%s", c.apiURL, api)
+}
+
 // GetStatus 获取插件运行状态
 // http 接口
 func (c *cqclient) GetStatus() *CQTypeGetStatus {
@@ -227,7 +231,7 @@ func (c *cqclient) GetStatus() *CQTypeGetStatus {
 		warnHTTPApiURLNotSet()
 		return nil
 	}
-	url := fmt.Sprintf("%s%s", c.apiURL, ActionGetStatus)
+	url := c.getAPIURL(ActionGetStatus)
 	res, err := c.httpConn.Get(url)
 	if err != nil {
 		errMsg := err.Error()
