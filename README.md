@@ -29,7 +29,7 @@ go build
 2. 需要安装[CoolQ HTTP API 插件](https://cqhttp.cc/)
 3. 必须开放websocket连接，http可选（不开放http可能部分”非重要”功能无法使用）
 
-## 插件
+## 插件
 
 插件示例如下：
 
