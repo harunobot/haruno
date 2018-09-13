@@ -33,8 +33,8 @@ go build
 
 插件示例如下：
 
-1. [转推插件](https://github.com/haruno-bot/haruno/tree/master/plugins/retweet)
-2. [图灵机器人插件](https://github.com/haruno-bot/haruno/tree/master/plugins/turing)
+1. [转推插件](https://github.com/haruno-bot/retweet)
+2. [图灵机器人插件](https://github.com/haruno-bot/turing)
 
 开发文档：
 
