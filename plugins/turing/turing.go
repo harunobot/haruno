@@ -20,6 +20,8 @@ import (
 var groupNums = make(map[int64]bool)
 var token string
 var client = clients.NewHTTPClient("")
+var name string
+var version string
 
 // 没有问题的回答
 var unReply = coolq.NewTextSection("我听不清，你在说什么呀？")
@@ -27,13 +29,11 @@ var unReply = coolq.NewTextSection("我听不清，你在说什么呀？")
 // Turing 结合图灵机器人api的插件
 type Turing struct {
 	coolq.Plugin
-	name    string
-	version string
 }
 
 // Name 插件名字+版本号
 func (_plugin Turing) Name() string {
-	return fmt.Sprintf("%s@%s", _plugin.name, _plugin.version)
+	return fmt.Sprintf("%s@%s", name, version)
 }
 
 func (_plugin *Turing) loadConfig() error {
@@ -44,8 +44,8 @@ func (_plugin *Turing) loadConfig() error {
 		return err
 	}
 	pcfg := cfg.Turing
-	_plugin.name = pcfg.Name
-	_plugin.version = pcfg.Version
+	name = pcfg.Name
+	version = pcfg.Version
 	token = pcfg.Token
 	for _, groupID := range pcfg.GroupNums {
 		groupNums[groupID] = true
@@ -149,6 +149,13 @@ func (_plugin Turing) Handlers() map[string]coolq.Handler {
 // Load 加载插件
 func (_plugin Turing) Load() error {
 	return _plugin.loadConfig()
+}
+
+// Loaded 加载完成
+func (_plugin Turing) Loaded() {
+	logMsg := fmt.Sprintf("%s已成功加载", _plugin.Name())
+	log.Println(logMsg)
+	logger.Service.AddLog(logger.LogTypeInfo, logMsg)
 }
 
 // Instance 实体
