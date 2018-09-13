@@ -145,11 +145,11 @@ func (c *cqclient) Initialize(token string) {
 			return
 		}
 		for _, entry := range c.pluginEntries {
-			entry.handlers[noFilterKey](event)
+			go entry.handlers[noFilterKey](event)
 			for key, filterFunc := range entry.fitlers {
 				handleFunc := entry.handlers[key]
 				if filterFunc(event) {
-					handleFunc(event)
+					go handleFunc(event)
 				}
 			}
 		}
