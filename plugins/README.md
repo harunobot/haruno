@@ -138,6 +138,28 @@ websocket客户端的特性：
 
 并不是所有的api都可以用ws实现的，部分要求响应的会使用http实现。
 
+## 注册插件
+
+考虑到go的plugin目前依旧不稳定，目前插件采用静态加载的方式。等稳定之后，将会切成动态加载。
+
+需要修改 `plugins/plugins.go` 文件：
+
+```go
+package plugins
+
+import (
+    "myplugin"
+)
+
+// SetupPlugins 安装插件的入口
+func SetupPlugins() {
+    // 注册插件的实例
+    coolq.PluginRegister(myplugin.Instance)
+}
+```
+
+然后静态编译。
+
 ## 问题
 
 如果开发的过程中遇到问题，请在开issue。或者email我：
