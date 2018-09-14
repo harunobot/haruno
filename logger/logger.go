@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
 	"sync"
 	"time"
 
@@ -93,8 +94,25 @@ func (logger *loggerService) Fails() int {
 	return logger.fails
 }
 
+func escapeCRLF(s string) string {
+	cr, _ := regexp.Compile(`\r`)
+	lf, _ := regexp.Compile(`\n`)
+	s = cr.ReplaceAllString(s, "\\r")
+	s = lf.ReplaceAllString(s, "\\n")
+	return s
+}
+
+func escapeHost(s string) string {
+	host, _ := regexp.Compile(`(\d+)\.\d+\.\d+\.(\d+)(?:\:(\d+))?`)
+	s = host.ReplaceAllString(s, "$1.*.*.$2:$3")
+	return s
+}
+
 // Add 往队列里加入一个新的log
 func (logger *loggerService) Add(lg *Log) {
+	msg := escapeCRLF(lg.Text)
+	msg = escapeHost(msg)
+	log.Println(msg)
 	logger.lgLock.Lock()
 	switch lg.Type {
 	case LogTypeSuccess:
