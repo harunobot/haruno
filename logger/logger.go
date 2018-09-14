@@ -110,8 +110,8 @@ func escapeHost(s string) string {
 
 // Add 往队列里加入一个新的log
 func (logger *loggerService) Add(lg *Log) {
+	lg.Text = escapeHost(lg.Text)
 	msg := escapeCRLF(lg.Text)
-	msg = escapeHost(msg)
 	log.Println(msg)
 	logger.lgLock.Lock()
 	switch lg.Type {
