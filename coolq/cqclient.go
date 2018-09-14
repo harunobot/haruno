@@ -148,9 +148,11 @@ func (c *cqclient) Initialize(token string) {
 			go entry.handlers[noFilterKey](event)
 			for key, filterFunc := range entry.fitlers {
 				handleFunc := entry.handlers[key]
-				if filterFunc(event) {
-					go handleFunc(event)
-				}
+				go func(filterFunc *Filter) {
+					if (*filterFunc)(event) {
+						handleFunc(event)
+					}
+				}(&filterFunc)
 			}
 		}
 	}
