@@ -45,7 +45,6 @@ type cqclient struct {
 func handleConnect(conn *clients.WSClient) {
 	if conn.IsConnected() {
 		msgText := fmt.Sprintf("%s服务已成功连接！", conn.Name)
-		log.Println(msgText)
 		logger.Service.AddLog(logger.LogTypeInfo, msgText)
 	}
 }
@@ -58,14 +57,18 @@ func handleError(err error) {
 
 func (c *cqclient) registerAllPlugins() {
 	// 先全部执行加载函数
+	loaded := make([]pluginInterface, 0)
 	for _, plug := range entries {
 		err := plug.Load()
 		if err != nil {
-			log.Fatalln(err.Error())
+			errMsg := fmt.Sprintf("Plugin %s can't be loaded, reason:\n %s", plug.Name(), err.Error())
+			logger.Service.AddLog(logger.LogTypeError, errMsg)
+			continue
 		}
+		loaded = append(loaded, plug)
 	}
 	// 注册所有的handler和filter
-	for _, plug := range entries {
+	for _, plug := range loaded {
 		pluginName := plug.Name()
 		pluginFilters := plug.Filters()
 		pluginHandlers := plug.Handlers()
@@ -98,7 +101,7 @@ func (c *cqclient) registerAllPlugins() {
 		c.pluginEntries[pluginName] = entry
 	}
 	// 触发所有插件的onload事件
-	for _, plug := range entries {
+	for _, plug := range loaded {
 		go plug.Loaded()
 	}
 }
@@ -140,7 +143,6 @@ func (c *cqclient) Initialize(token string) {
 		err := json.Unmarshal(raw, event)
 		if err != nil {
 			errMsg := err.Error()
-			log.Panicln(errMsg)
 			logger.Service.AddLog(logger.LogTypeError, errMsg)
 			return
 		}
@@ -237,7 +239,6 @@ func (c *cqclient) GetStatus() *CQTypeGetStatus {
 	res, err := c.httpConn.Get(url)
 	if err != nil {
 		errMsg := err.Error()
-		fmt.Println(errMsg)
 		logger.Service.AddLog(logger.LogTypeError, errMsg)
 		return nil
 	}
@@ -246,7 +247,6 @@ func (c *cqclient) GetStatus() *CQTypeGetStatus {
 	err = json.NewDecoder(res.Body).Decode(response)
 	if err != nil {
 		errMsg := err.Error()
-		fmt.Println(errMsg)
 		logger.Service.AddLog(logger.LogTypeError, errMsg)
 		return nil
 	}
