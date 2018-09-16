@@ -220,6 +220,24 @@ func (c *cqclient) SendGroupMsg(groupID int64, message string) {
 	c.apiConn.Send(websocket.TextMessage, msg)
 }
 
+// SendPrivateMsg 发送私聊消息
+// websocket 接口
+func (c *cqclient) SendPrivateMsg(userID int64, message string) {
+	if !c.IsAPIOk() {
+		return
+	}
+	payload := &CQWSMessage{
+		Action: ActionSendPrivateMsg,
+		Params: CQTypeSendPrivateMsg{
+			UserID:  userID,
+			Message: message,
+		},
+		Echo: time.Now().Unix(),
+	}
+	msg, _ := json.Marshal(payload)
+	c.apiConn.Send(websocket.TextMessage, msg)
+}
+
 func warnHTTPApiURLNotSet() {
 	log.Println("[WARNING] Try to request a http api url, but no http api url was set.")
 }
