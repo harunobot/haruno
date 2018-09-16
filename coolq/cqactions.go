@@ -13,8 +13,6 @@ const (
 	ActionSetGroupBan = "set_group_ban" // DONE: websocket
 	// ActionSetGroupWholeBan 群组全员禁言
 	ActionSetGroupWholeBan = "set_group_whole_ban" // DONE: websocket
-	// ActionGetGroupMemberList 获取群成员列表
-	ActionGetGroupMemberList = "get_group_member_list"
 	// ActionGetStatus 获取插件运行状态
 	ActionGetStatus = "get_status" // DONE: http
 )
