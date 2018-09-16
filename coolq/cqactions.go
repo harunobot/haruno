@@ -10,7 +10,7 @@ const (
 	// ActionSetGroupKick 群组踢人
 	ActionSetGroupKick = "set_group_kick" // DONE: websocket
 	// ActionSetGroupBan 群组单人禁言
-	ActionSetGroupBan = "set_group_ban"
+	ActionSetGroupBan = "set_group_ban" // DONE: websocket
 	// ActionSetGroupWholeBan 群组全员禁言
 	ActionSetGroupWholeBan = "set_group_whole_ban"
 	// ActionGetGroupMemberList 获取群成员列表
@@ -55,6 +55,13 @@ type CQTypeSetGroupKick struct {
 	GroupID          int64 `json:"group_id"`
 	UserID           int64 `json:"user_id"`
 	RejectAddRequest bool  `json:"reject_add_request"`
+}
+
+// CQTypeSetGroupBan ActionSetGroupBan动作数据格式
+type CQTypeSetGroupBan struct {
+	GroupID  int64 `json:"group_id"`
+	UserID   int64 `json:"user_id"`
+	Duration int64 `json:"duration"`
 }
 
 // CQTypeGetStatus ActionGetStatus的响应数据格式

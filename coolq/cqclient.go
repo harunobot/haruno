@@ -258,6 +258,26 @@ func (c *cqclient) SetGroupKick(groupID, userID int64, reject bool) {
 	c.apiConn.Send(websocket.TextMessage, msg)
 }
 
+// SetGroupBan 群组单人禁言
+// duration 禁言时长，单位秒，0 表示取消禁言
+// websocket 接口
+func (c *cqclient) SetGroupBan(groupID, userID int64, duration int64) {
+	if !c.IsAPIOk() {
+		return
+	}
+	payload := &CQWSMessage{
+		Action: ActionSetGroupBan,
+		Params: CQTypeSetGroupBan{
+			GroupID:  groupID,
+			UserID:   userID,
+			Duration: duration,
+		},
+		Echo: time.Now().Unix(),
+	}
+	msg, _ := json.Marshal(payload)
+	c.apiConn.Send(websocket.TextMessage, msg)
+}
+
 func warnHTTPApiURLNotSet() {
 	log.Println("[WARNING] Try to request a http api url, but no http api url was set.")
 }
