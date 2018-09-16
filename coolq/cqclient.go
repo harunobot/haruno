@@ -202,12 +202,18 @@ func (c *cqclient) IsEventOk() bool {
 	return c.eventConn.IsConnected()
 }
 
-// SendGroupMsg 发送群消息
-// websocket 接口
-func (c *cqclient) SendGroupMsg(groupID int64, message string) {
+// APISendJSON 发送api json格式的数据
+func (c *cqclient) APISendJSON(data interface{}) {
 	if !c.IsAPIOk() {
 		return
 	}
+	msg, _ := json.Marshal(data)
+	c.apiConn.Send(websocket.TextMessage, msg)
+}
+
+// SendGroupMsg 发送群消息
+// websocket 接口
+func (c *cqclient) SendGroupMsg(groupID int64, message string) {
 	payload := &CQWSMessage{
 		Action: ActionSendGroupMsg,
 		Params: CQTypeSendGroupMsg{
@@ -216,16 +222,12 @@ func (c *cqclient) SendGroupMsg(groupID int64, message string) {
 		},
 		Echo: time.Now().Unix(),
 	}
-	msg, _ := json.Marshal(payload)
-	c.apiConn.Send(websocket.TextMessage, msg)
+	c.APISendJSON(payload)
 }
 
 // SendPrivateMsg 发送私聊消息
 // websocket 接口
 func (c *cqclient) SendPrivateMsg(userID int64, message string) {
-	if !c.IsAPIOk() {
-		return
-	}
 	payload := &CQWSMessage{
 		Action: ActionSendPrivateMsg,
 		Params: CQTypeSendPrivateMsg{
@@ -234,17 +236,13 @@ func (c *cqclient) SendPrivateMsg(userID int64, message string) {
 		},
 		Echo: time.Now().Unix(),
 	}
-	msg, _ := json.Marshal(payload)
-	c.apiConn.Send(websocket.TextMessage, msg)
+	c.APISendJSON(payload)
 }
 
 // SetGroupKick 群组踢人
 // reject 是否拒绝加群申请
 // websocket 接口
 func (c *cqclient) SetGroupKick(groupID, userID int64, reject bool) {
-	if !c.IsAPIOk() {
-		return
-	}
 	payload := &CQWSMessage{
 		Action: ActionSetGroupKick,
 		Params: CQTypeSetGroupKick{
@@ -254,17 +252,13 @@ func (c *cqclient) SetGroupKick(groupID, userID int64, reject bool) {
 		},
 		Echo: time.Now().Unix(),
 	}
-	msg, _ := json.Marshal(payload)
-	c.apiConn.Send(websocket.TextMessage, msg)
+	c.APISendJSON(payload)
 }
 
 // SetGroupBan 群组单人禁言
 // duration 禁言时长，单位秒，0 表示取消禁言
 // websocket 接口
 func (c *cqclient) SetGroupBan(groupID, userID int64, duration int64) {
-	if !c.IsAPIOk() {
-		return
-	}
 	payload := &CQWSMessage{
 		Action: ActionSetGroupBan,
 		Params: CQTypeSetGroupBan{
@@ -274,17 +268,13 @@ func (c *cqclient) SetGroupBan(groupID, userID int64, duration int64) {
 		},
 		Echo: time.Now().Unix(),
 	}
-	msg, _ := json.Marshal(payload)
-	c.apiConn.Send(websocket.TextMessage, msg)
+	c.APISendJSON(payload)
 }
 
 // SetGroupWholeBan 群组全员禁言
 // enable 是否禁言
 // websocket 接口
 func (c *cqclient) SetGroupWholeBan(groupID int64, enable bool) {
-	if !c.IsAPIOk() {
-		return
-	}
 	payload := &CQWSMessage{
 		Action: ActionSetGroupWholeBan,
 		Params: CQTypeSetGroupWholeBan{
@@ -293,8 +283,7 @@ func (c *cqclient) SetGroupWholeBan(groupID int64, enable bool) {
 		},
 		Echo: time.Now().Unix(),
 	}
-	msg, _ := json.Marshal(payload)
-	c.apiConn.Send(websocket.TextMessage, msg)
+	c.APISendJSON(payload)
 }
 
 func warnHTTPApiURLNotSet() {
