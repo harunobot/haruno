@@ -12,7 +12,7 @@ const (
 	// ActionSetGroupBan 群组单人禁言
 	ActionSetGroupBan = "set_group_ban" // DONE: websocket
 	// ActionSetGroupWholeBan 群组全员禁言
-	ActionSetGroupWholeBan = "set_group_whole_ban"
+	ActionSetGroupWholeBan = "set_group_whole_ban" // DONE: websocket
 	// ActionGetGroupMemberList 获取群成员列表
 	ActionGetGroupMemberList = "get_group_member_list"
 	// ActionGetStatus 获取插件运行状态
@@ -62,6 +62,12 @@ type CQTypeSetGroupBan struct {
 	GroupID  int64 `json:"group_id"`
 	UserID   int64 `json:"user_id"`
 	Duration int64 `json:"duration"`
+}
+
+// CQTypeSetGroupWholeBan ActionSetGroupWholeBan动作数据格式
+type CQTypeSetGroupWholeBan struct {
+	GroupID int64 `json:"group_id"`
+	Enable  bool  `json:"enable"`
 }
 
 // CQTypeGetStatus ActionGetStatus的响应数据格式
