@@ -238,6 +238,26 @@ func (c *cqclient) SendPrivateMsg(userID int64, message string) {
 	c.apiConn.Send(websocket.TextMessage, msg)
 }
 
+// SetGroupKick 群组踢人
+// reject 是否拒绝加群申请
+// websocket 接口
+func (c *cqclient) SetGroupKick(groupID, userID int64, reject bool) {
+	if !c.IsAPIOk() {
+		return
+	}
+	payload := &CQWSMessage{
+		Action: ActionSetGroupKick,
+		Params: CQTypeSetGroupKick{
+			GroupID:          groupID,
+			UserID:           userID,
+			RejectAddRequest: reject,
+		},
+		Echo: time.Now().Unix(),
+	}
+	msg, _ := json.Marshal(payload)
+	c.apiConn.Send(websocket.TextMessage, msg)
+}
+
 func warnHTTPApiURLNotSet() {
 	log.Println("[WARNING] Try to request a http api url, but no http api url was set.")
 }

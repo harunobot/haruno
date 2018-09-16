@@ -7,8 +7,8 @@ const (
 	ActionSendPrivateMsg = "send_private_msg" // DONE: websocket
 	// ActionSendGroupMsg 发送群消息
 	ActionSendGroupMsg = "send_group_msg" // DONE: websocket
-	// ActionSetGroupSpecialTitle 设置群组专属头衔
-	ActionSetGroupSpecialTitle = "set_group_special_title"
+	// ActionSetGroupKick 群组踢人
+	ActionSetGroupKick = "set_group_kick" // DONE: websocket
 	// ActionSetGroupBan 群组单人禁言
 	ActionSetGroupBan = "set_group_ban"
 	// ActionSetGroupWholeBan 群组全员禁言
@@ -48,6 +48,13 @@ type CQTypeSendPrivateMsg struct {
 	UserID     int64  `json:"user_id"`
 	Message    string `json:"message"`
 	AutoEscape bool   `json:"auto_escape"`
+}
+
+// CQTypeSetGroupKick AActionSetGroupKick动作数据格式
+type CQTypeSetGroupKick struct {
+	GroupID          int64 `json:"group_id"`
+	UserID           int64 `json:"user_id"`
+	RejectAddRequest bool  `json:"reject_add_request"`
 }
 
 // CQTypeGetStatus ActionGetStatus的响应数据格式
