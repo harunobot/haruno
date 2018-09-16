@@ -44,7 +44,7 @@ func (bot *haruno) loadConfig() {
 	cfg := new(config)
 	_, err := toml.DecodeFile("./config.toml", cfg)
 	if err != nil {
-		log.Fatal("Haruno Initialize fialed", err)
+		log.Fatalln("Haruno Initialize fialed:", err)
 	}
 	bot.startTime = time.Now().UnixNano() / 1e6
 	bot.port = cfg.ServerPort
