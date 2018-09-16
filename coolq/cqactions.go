@@ -17,8 +17,6 @@ const (
 	ActionGetGroupMemberList = "get_group_member_list"
 	// ActionGetStatus 获取插件运行状态
 	ActionGetStatus = "get_status" // DONE: http
-	// ActionSetRestartPlugin 重启 HTTP API 插件
-	ActionSetRestartPlugin = "set_restart_plugin"
 )
 
 // CQWSMessage coolq ws基本消息类型
