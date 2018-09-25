@@ -120,6 +120,7 @@ func (logger *loggerService) Add(lg *Log) {
 	}
 	logger.queue = append(logger.queue, lg)
 	logger.lgLock.Unlock()
+	logger.writeToFile(lg)
 	go func() {
 		logger.lgChan <- lg.Time
 	}()
@@ -195,7 +196,7 @@ func (logger *loggerService) setupTransaction() {
 		for {
 			select {
 			case <-ticker.C:
-				ok, logMsg := logger.pop()
+				ok, _ := logger.pop()
 				cleanup := false
 				if ok {
 					log.Printf("Log queue (%d) will be cleaned up.\n", len(logger.queue)+1)
@@ -207,8 +208,7 @@ func (logger *loggerService) setupTransaction() {
 					default:
 					}
 					cleanup = true
-					logger.writeToFile(logMsg)
-					ok, logMsg = logger.pop()
+					ok, _ = logger.pop()
 				}
 				if cleanup {
 					log.Println("Log queue has been cleaned up.")

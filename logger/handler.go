@@ -46,7 +46,6 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				break
 			}
-			Service.writeToFile(lg)
 			for c, ok := range Service.conns {
 				if !ok {
 					continue
@@ -96,7 +95,7 @@ func RawLogHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer fp.Close()
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Add("Content-Length", fmt.Sprintf("%d", stat.Size()))
 	buff := make([]byte, 100)
 	for {
