@@ -56,7 +56,7 @@ func handleError(err error) {
 }
 
 func (c *cqclient) registerAllPlugins() {
-	// 先全部执行加载函数
+	// 1. 先全部执行加载函数
 	loaded := make([]pluginInterface, 0)
 	for _, plug := range entries {
 		err := plug.Load()
@@ -67,7 +67,7 @@ func (c *cqclient) registerAllPlugins() {
 		}
 		loaded = append(loaded, plug)
 	}
-	// 注册所有的handler和filter
+	// 2. 注册所有的handler和filter
 	for _, plug := range loaded {
 		pluginName := plug.Name()
 		pluginFilters := plug.Filters()
@@ -78,6 +78,7 @@ func (c *cqclient) registerAllPlugins() {
 			handlers: make(map[string]Handler),
 		}
 		noFilterHanlers := make([]Handler, 0)
+		// 对应filter的key寻找相应的handler， 没有的话则给出警告
 		for key, filter := range pluginFilters {
 			handler := pluginHandlers[key]
 			if handler == nil {
@@ -93,6 +94,7 @@ func (c *cqclient) registerAllPlugins() {
 				noFilterHanlers = append(noFilterHanlers, handler)
 			}
 		}
+		// 最后注册无key的handler
 		entry.handlers[noFilterKey] = func(event *CQEvent) {
 			for _, hanldeFunc := range noFilterHanlers {
 				hanldeFunc(event)
@@ -100,7 +102,7 @@ func (c *cqclient) registerAllPlugins() {
 		}
 		c.pluginEntries[pluginName] = entry
 	}
-	// 触发所有插件的onload事件
+	// 3. 触发所有插件的onload事件
 	for _, plug := range loaded {
 		go plug.Loaded()
 	}
@@ -116,13 +118,13 @@ func (c *cqclient) Initialize(token string) {
 	c.apiConn.Name = "酷Q机器人Api"
 	c.eventConn.Name = "酷Q机器人Event"
 	c.registerAllPlugins()
-	// handle connect
+	// 注册连接事件回调
 	c.apiConn.OnConnect = handleConnect
 	c.eventConn.OnConnect = handleConnect
-	// handle error
+	// 注册错误事件回调
 	c.apiConn.OnError = handleError
 	c.eventConn.OnError = handleError
-	// handle message
+	// 注册消息事件回调
 	c.apiConn.OnMessage = func(raw []byte) {
 		msg := new(CQResponse)
 		err := json.Unmarshal(raw, msg)
@@ -130,6 +132,7 @@ func (c *cqclient) Initialize(token string) {
 			logger.Service.AddLog(logger.LogTypeError, err.Error())
 			return
 		}
+		// echo队列 - 确定发送消息是否超时
 		echo := msg.Echo
 		if c.echoqueue[echo] {
 			c.mu.Lock()
@@ -137,7 +140,7 @@ func (c *cqclient) Initialize(token string) {
 			c.mu.Unlock()
 		}
 	}
-	// handle events
+	// 注册上报事件回调
 	c.eventConn.OnMessage = func(raw []byte) {
 		event := new(CQEvent)
 		err := json.Unmarshal(raw, event)
@@ -147,7 +150,9 @@ func (c *cqclient) Initialize(token string) {
 			return
 		}
 		for _, entry := range c.pluginEntries {
+			// 先异步处理没有key的回调
 			go entry.handlers[noFilterKey](event)
+			// 一次异步执行所有的 filter 和 handler 对
 			for key, filterFunc := range entry.fitlers {
 				handleFunc := entry.handlers[key]
 				go func(filterFunc *Filter) {
@@ -159,7 +164,7 @@ func (c *cqclient) Initialize(token string) {
 		}
 	}
 
-	// 定时清理echo序列
+	// 定时清理echo队列 (30s)
 	go func() {
 		ticker := time.NewTicker(timeForWait * time.Second)
 		defer ticker.Stop()
@@ -168,6 +173,7 @@ func (c *cqclient) Initialize(token string) {
 			case <-ticker.C:
 				now := time.Now().Unix()
 				for echo, state := range c.echoqueue {
+					// 对于超过30s未响应的给出提示
 					if state && now-echo > timeForWait {
 						logger.Service.AddLog(logger.LogTypeError, fmt.Sprintf("Echo = %d 响应超时(30s).", echo))
 						c.mu.Lock()
