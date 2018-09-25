@@ -82,7 +82,6 @@ func RawLogHandler(w http.ResponseWriter, r *http.Request) {
 	logfilePath := path.Join(Service.LogsPath(), logfileName)
 	stat, err := os.Stat(logfilePath)
 	if err != nil && os.IsNotExist(err) {
-		// 不存在目录的时候创建目录
 		w.WriteHeader(404)
 		w.Write(FileNotFoundError)
 		return

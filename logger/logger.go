@@ -189,8 +189,8 @@ func setupPong(conn *websocket.Conn, quit chan int) {
 	}()
 }
 
-func (logger *loggerService) setupTransaction() {
-	ticker := time.NewTicker(30 * time.Second)
+func (logger *loggerService) setupTransaction(duration time.Duration) {
+	ticker := time.NewTicker(duration)
 	go func() {
 		defer ticker.Stop()
 		for {
@@ -220,6 +220,7 @@ func (logger *loggerService) setupTransaction() {
 
 // Initialize 初始化logger服务
 func (logger *loggerService) Initialize() {
+	// 建立日志目录
 	if logger.logsPath == "" {
 		log.Fatal("LogsPath not set please use logger.Default.SetLogsPath func set it.")
 	}
@@ -239,6 +240,8 @@ func (logger *loggerService) Initialize() {
 	}
 	// 创建连接池
 	logger.conns = make(map[*websocket.Conn]bool)
+	// 创建log管道
 	logger.lgChan = make(chan int64)
-	logger.setupTransaction()
+	// 建立定时清理事务 (30s)
+	logger.setupTransaction(30 * time.Second)
 }
