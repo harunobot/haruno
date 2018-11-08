@@ -104,7 +104,7 @@ func Unmarshal(raw []byte, msg *Message) error {
 			cqType := strings.Split(payloads[0], ":")
 			if cqType[0] != "CQ" && len(cqType) != 2 {
 				msg = nil
-				return errors.New("syntax error: invalid cqcode, expecting a string startswith \"CQ\", and cqcode type after")
+				return errors.New("syntax error: invalid cqcode, expecting a string starts with \"CQ\", and cqcode type after")
 			}
 			section := Section{
 				Type: cqType[1],

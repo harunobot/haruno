@@ -20,7 +20,7 @@ const LogTypeInfo = 0
 // LogTypeError 错误类型
 const LogTypeError = 1
 
-// LogTypeSuccess 成功on类型
+// LogTypeSuccess 成功类型
 const LogTypeSuccess = 2
 
 var logTypeStr = []string{"info", "error", "success"}
@@ -132,7 +132,7 @@ func (logger *loggerService) AddLog(ltype int, text string) {
 	logger.Add(lg)
 }
 
-// pop 冲队列中取出一个log
+// pop 从队列中取出一个log
 func (logger *loggerService) pop() (bool, *Log) {
 	if len(logger.queue) == 0 {
 		return false, nil
