@@ -14,24 +14,24 @@ type HTTPClient struct {
 	Header http.Header
 }
 
-// DefaultHTTPClient 默认的http客户端
+// DefaultHTTPClient 默认的公共http客户端
 // 建议没有特殊需求的功能都使用这个客户端
 var DefaultHTTPClient = NewHTTPClient("")
 
 // NewHTTPClient 创建新的 http client 客户端
-// proxyURL 客户端代理 proxy: socks or http
-func NewHTTPClient(proxyURL string) *HTTPClient {
+// proxy 客户端代理 proxy: socks or http
+func NewHTTPClient(proxy string) *HTTPClient {
 	client := new(HTTPClient)
 	// 设置默认的请求头
 	client.Header = make(http.Header)
-	client.Header.Set("User-Agent", "Haruno Bot")
+	client.Header.Set("User-Agent", "Haruno Robot")
 	jar, _ := cookiejar.New(nil)
 	client.Jar = jar
-	if proxyURL != "" {
-		proxy := func(_ *http.Request) (*url.URL, error) {
-			return url.Parse(proxyURL)
+	if proxy != "" {
+		proxyHandler := func(*http.Request) (*url.URL, error) {
+			return url.Parse(proxy)
 		}
-		transport := &http.Transport{Proxy: proxy}
+		transport := &http.Transport{Proxy: proxyHandler}
 		client.Transport = transport
 	}
 	return client
