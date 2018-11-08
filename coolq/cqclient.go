@@ -112,7 +112,7 @@ func (c *cqclient) registerAllPlugins() {
 // token 酷q机器人的access token
 func (c *cqclient) Initialize(token string) {
 	c.token = token
-	c.httpConn = clients.NewHTTPClient("")
+	c.httpConn = clients.NewHTTPClient()
 	c.httpConn.Header.Set("Authorization", fmt.Sprintf("Token %s", c.token))
 
 	c.apiConn.Name = "酷Q机器人Api"
