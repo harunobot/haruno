@@ -24,6 +24,7 @@ type config struct {
 	CQWSURL    string `toml:"cqWSURL"`
 	CQHTTPURL  string `toml:"cqHTTPURL"`
 	CQToken    string `toml:"cqToken"`
+	WebRoot    string `toml:"webroot"`
 }
 
 // haruno 晴乃机器人
@@ -36,6 +37,7 @@ type haruno struct {
 	cqWSURL   string
 	cqHTTPURL string
 	cqToken   string
+	webRoot   string
 }
 
 var bot = new(haruno)
@@ -51,6 +53,7 @@ func (bot *haruno) loadConfig() {
 	bot.logpath = cfg.LogsPath
 	bot.version = cfg.Version
 	bot.cqWSURL = cfg.CQWSURL
+	bot.webRoot = cfg.WebRoot
 	bot.cqHTTPURL = cfg.CQHTTPURL
 	bot.cqToken = cfg.CQToken
 }
@@ -91,9 +94,14 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 
 // Run 启动机器人
 func (bot *haruno) Run() {
-	page := http.FileServer(http.Dir("./server"))
-	http.Handle("/", page)
-
+	if bot.webRoot != "" {
+		_, err := os.Stat(bot.webRoot)
+		if err == nil {
+			log.Print("Web pages found!")
+			page := http.FileServer(http.Dir(bot.webRoot))
+			http.Handle("/", page)
+		}
+	}
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/logs/-/type=websocket", logger.WSLogHandler)
 	http.HandleFunc("/logs/-/type=plain", logger.RawLogHandler)
