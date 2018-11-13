@@ -10,8 +10,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const pingWaitTime = time.Second * 5
-
 // WSClient 拓展的websocket客户端，可以自动重连
 // 这个没有默认的客户端
 type WSClient struct {
