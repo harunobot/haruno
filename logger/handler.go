@@ -8,6 +8,8 @@ import (
 	"os"
 	"path"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 var (
@@ -19,6 +21,8 @@ var (
 	InnerServerError = []byte("服务器内部错误")
 )
 
+var upgrader = websocket.Upgrader{}
+
 // WSLogHandler 广播log
 func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -27,9 +31,9 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	welcome := NewLog(LogTypeInfo, "Logger服务连接成功!")
-	Service.cpLock.Lock()
+	Service.wsConnLock.Lock()
 	Service.conns[conn] = true
-	Service.cpLock.Unlock()
+	Service.wsConnLock.Unlock()
 	quit := make(chan int)
 	setupPong(conn, quit)
 	conn.WriteJSON(welcome)
@@ -41,7 +45,7 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-quit:
 			return
-		case <-Service.lgChan:
+		case <-Service.logChan:
 			ok, lg := Service.pop()
 			if !ok {
 				break
@@ -52,9 +56,9 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				err := c.WriteJSON(lg)
 				if err != nil {
-					Service.cpLock.Lock()
+					Service.wsConnLock.Lock()
 					Service.conns[c] = false
-					Service.cpLock.Unlock()
+					Service.wsConnLock.Unlock()
 				}
 			}
 		}

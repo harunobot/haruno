@@ -12,8 +12,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{}
-
 // LogTypeInfo 信息类型
 const LogTypeInfo = 0
 
@@ -22,6 +20,10 @@ const LogTypeError = 1
 
 // LogTypeSuccess 成功类型
 const LogTypeSuccess = 2
+
+// maxQueueSize 队列最大大小
+// == 用户首次通过websocket链接能看到的最大的日志数量
+const maxQueueSize = 5
 
 var logTypeStr = []string{"info", "error", "success"}
 
@@ -43,15 +45,15 @@ func NewLog(ltype int, text string) *Log {
 }
 
 type loggerService struct {
-	conns    map[*websocket.Conn]bool
-	success  int
-	fails    int
-	logsPath string
-	queue    []*Log
-	lgChan   chan int64
-	wLock    sync.Mutex
-	lgLock   sync.Mutex
-	cpLock   sync.Mutex
+	conns        map[*websocket.Conn]bool
+	success      int
+	fails        int
+	logsPath     string
+	queue        []*Log
+	logChan      chan int64
+	logLock      sync.Mutex
+	logWriteLock sync.Mutex
+	wsConnLock   sync.Mutex
 }
 
 // 时间格式等基本的常量
@@ -111,7 +113,7 @@ func (logger *loggerService) Add(lg *Log) {
 	lg.Text = escapeHost(lg.Text)
 	msg := escapeCRLF(lg.Text)
 	log.Println(msg)
-	logger.lgLock.Lock()
+	logger.logLock.Lock()
 	switch lg.Type {
 	case LogTypeSuccess:
 		logger.success++
@@ -119,11 +121,13 @@ func (logger *loggerService) Add(lg *Log) {
 		logger.fails++
 	}
 	logger.queue = append(logger.queue, lg)
-	logger.lgLock.Unlock()
 	logger.writeToFile(lg)
-	go func() {
-		logger.lgChan <- lg.Time
-	}()
+	logger.logChan <- lg.Time
+	if len(logger.queue) > maxQueueSize {
+		<-logger.logChan
+		logger.queue = logger.queue[1:]
+	}
+	logger.logLock.Unlock()
 }
 
 // AddLog 往队列里加入一个新的log
@@ -138,9 +142,9 @@ func (logger *loggerService) pop() (bool, *Log) {
 		return false, nil
 	}
 	lg := logger.queue[0]
-	logger.lgLock.Lock()
+	logger.logLock.Lock()
 	logger.queue = logger.queue[1:]
-	logger.lgLock.Unlock()
+	logger.logLock.Unlock()
 	return true, lg
 }
 
@@ -154,15 +158,15 @@ func (logger *loggerService) writeToFile(lg *Log) {
 	}
 	logstr := fmt.Sprintf("%s - - %s - - %s\n", logtime, logTypeStr[lg.Type], lg.Text)
 	defer fp.Close()
-	logger.wLock.Lock()
+	logger.logWriteLock.Lock()
 	fp.WriteString(logstr)
-	logger.wLock.Unlock()
+	logger.logWriteLock.Unlock()
 }
 
 func delconn(conn *websocket.Conn) {
-	Service.cpLock.Lock()
+	Service.wsConnLock.Lock()
 	delete(Service.conns, conn)
-	Service.cpLock.Unlock()
+	Service.wsConnLock.Unlock()
 }
 
 func setupPong(conn *websocket.Conn, quit chan int) {
@@ -183,35 +187,6 @@ func setupPong(conn *websocket.Conn, quit chan int) {
 				conn.SetWriteDeadline(time.Now().Add(pongWaitTime))
 				if err := conn.WriteMessage(websocket.PongMessage, pongMsg); err != nil {
 					close(quit)
-				}
-			}
-		}
-	}()
-}
-
-func (logger *loggerService) setupTransaction(duration time.Duration) {
-	ticker := time.NewTicker(duration)
-	go func() {
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				ok, _ := logger.pop()
-				cleanup := false
-				if ok {
-					log.Printf("Log queue (%d) will be cleaned up.\n", len(logger.queue)+1)
-				}
-				for ok {
-					// 清空管道
-					select {
-					case <-logger.lgChan:
-					default:
-					}
-					cleanup = true
-					ok, _ = logger.pop()
-				}
-				if cleanup {
-					log.Println("Log queue has been cleaned up.")
 				}
 			}
 		}
@@ -241,7 +216,5 @@ func (logger *loggerService) Initialize() {
 	// 创建连接池
 	logger.conns = make(map[*websocket.Conn]bool)
 	// 创建log管道
-	logger.lgChan = make(chan int64)
-	// 建立定时清理事务 (30s)
-	logger.setupTransaction(30 * time.Second)
+	logger.logChan = make(chan int64)
 }
