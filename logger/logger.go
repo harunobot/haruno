@@ -49,8 +49,7 @@ type loggerService struct {
 	success      int
 	fails        int
 	logsPath     string
-	queue        []*Log
-	logChan      chan int64
+	logChan      chan *Log
 	logLock      sync.Mutex
 	logWriteLock sync.Mutex
 	wsConnLock   sync.Mutex
@@ -120,12 +119,10 @@ func (logger *loggerService) Add(lg *Log) {
 	case LogTypeError:
 		logger.fails++
 	}
-	logger.queue = append(logger.queue, lg)
 	logger.writeToFile(lg)
-	logger.logChan <- lg.Time
-	if len(logger.queue) >= maxQueueSize {
+	logger.logChan <- lg
+	if len(logger.logChan) >= maxQueueSize {
 		<-logger.logChan
-		logger.queue = logger.queue[1:]
 	}
 	logger.logLock.Unlock()
 }
@@ -134,18 +131,6 @@ func (logger *loggerService) Add(lg *Log) {
 func (logger *loggerService) AddLog(ltype int, text string) {
 	lg := NewLog(ltype, text)
 	logger.Add(lg)
-}
-
-// pop 从队列中取出一个log
-func (logger *loggerService) pop() (bool, *Log) {
-	if len(logger.queue) == 0 {
-		return false, nil
-	}
-	lg := logger.queue[0]
-	logger.logLock.Lock()
-	logger.queue = logger.queue[1:]
-	logger.logLock.Unlock()
-	return true, lg
 }
 
 // writeToFile log写入文件
@@ -216,5 +201,5 @@ func (logger *loggerService) Initialize() {
 	// 创建连接池
 	logger.conns = make(map[*websocket.Conn]bool)
 	// 创建log管道
-	logger.logChan = make(chan int64, maxQueueSize)
+	logger.logChan = make(chan *Log, maxQueueSize)
 }

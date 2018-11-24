@@ -30,13 +30,13 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 		Service.AddLog(LogTypeError, err.Error())
 		return
 	}
-	welcome := NewLog(LogTypeInfo, "Logger服务连接成功!")
+	var welMsg = NewLog(LogTypeInfo, "Logger服务连接成功!")
 	Service.wsConnLock.Lock()
 	Service.conns[conn] = true
 	Service.wsConnLock.Unlock()
 	quit := make(chan int)
 	setupPong(conn, quit)
-	conn.WriteJSON(welcome)
+	conn.WriteJSON(welMsg)
 	for {
 		if !Service.conns[conn] {
 			close(quit)
@@ -45,11 +45,7 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-quit:
 			return
-		case <-Service.logChan:
-			ok, lg := Service.pop()
-			if !ok {
-				break
-			}
+		case lg := <-Service.logChan:
 			for c, ok := range Service.conns {
 				if !ok {
 					continue
