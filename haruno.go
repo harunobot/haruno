@@ -97,7 +97,6 @@ func (bot *haruno) Run() {
 	if bot.webRoot != "" {
 		_, err := os.Stat(bot.webRoot)
 		if err == nil {
-			log.Print("Web pages found!")
 			page := http.FileServer(http.Dir(bot.webRoot))
 			http.Handle("/", page)
 		}
