@@ -123,7 +123,7 @@ func (logger *loggerService) Add(lg *Log) {
 	logger.queue = append(logger.queue, lg)
 	logger.writeToFile(lg)
 	logger.logChan <- lg.Time
-	if len(logger.queue) > maxQueueSize {
+	if len(logger.queue) >= maxQueueSize {
 		<-logger.logChan
 		logger.queue = logger.queue[1:]
 	}
@@ -163,7 +163,7 @@ func (logger *loggerService) writeToFile(lg *Log) {
 	logger.logWriteLock.Unlock()
 }
 
-func delconn(conn *websocket.Conn) {
+func delConn(conn *websocket.Conn) {
 	Service.wsConnLock.Lock()
 	delete(Service.conns, conn)
 	Service.wsConnLock.Unlock()
@@ -175,7 +175,7 @@ func setupPong(conn *websocket.Conn, quit chan int) {
 	go func() {
 		defer pongTicker.Stop()
 		defer conn.Close()
-		defer delconn(conn)
+		defer delConn(conn)
 		for {
 			if Service.conns[conn] != true {
 				close(quit)
@@ -216,5 +216,5 @@ func (logger *loggerService) Initialize() {
 	// 创建连接池
 	logger.conns = make(map[*websocket.Conn]bool)
 	// 创建log管道
-	logger.logChan = make(chan int64)
+	logger.logChan = make(chan int64, maxQueueSize)
 }
