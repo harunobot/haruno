@@ -148,7 +148,7 @@ websocket客户端的特性：
 package plugins
 
 import (
-    "myplugin"
+    "github.com/username/myplugin"
 )
 
 // SetupPlugins 安装插件的入口
@@ -164,4 +164,4 @@ func SetupPlugins() {
 
 如果开发的过程中遇到问题，请在开issue。或者email我：
 
-macchenjl#foxmail.com
+macchenjl#foxmail.com (# => @)
