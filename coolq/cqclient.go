@@ -55,7 +55,8 @@ func handleError(err error) {
 	logger.Service.Add(errMsg)
 }
 
-func (c *cqclient) registerAllPlugins() {
+// RegisterAllPlugins 注册所有的插件
+func (c *cqclient) RegisterAllPlugins() {
 	// 1. 先全部执行加载函数
 	loaded := make([]pluginInterface, 0)
 	for _, plug := range entries {
@@ -68,6 +69,7 @@ func (c *cqclient) registerAllPlugins() {
 		loaded = append(loaded, plug)
 	}
 	// 2. 注册所有的handler和filter
+	c.mu.Lock()
 	for _, plug := range loaded {
 		pluginName := plug.Name()
 		pluginFilters := plug.Filters()
@@ -102,6 +104,7 @@ func (c *cqclient) registerAllPlugins() {
 		}
 		c.pluginEntries[pluginName] = entry
 	}
+	c.mu.Unlock()
 	// 3. 触发所有插件的onload事件
 	for _, plug := range loaded {
 		go plug.Loaded()
@@ -117,7 +120,6 @@ func (c *cqclient) Initialize(token string) {
 
 	c.apiConn.Name = "酷Q机器人Api"
 	c.eventConn.Name = "酷Q机器人Event"
-	c.registerAllPlugins()
 	// 注册连接事件回调
 	c.apiConn.OnConnect = handleConnect
 	c.eventConn.OnConnect = handleConnect

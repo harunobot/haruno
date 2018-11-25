@@ -3,15 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/haruno-bot/haruno/coolq"
+	"github.com/haruno-bot/haruno/plugins"
 	"log"
 	"net/http"
 	"os"
 	"runtime"
 	"time"
-
-	"github.com/haruno-bot/haruno/coolq"
-
-	"github.com/haruno-bot/haruno/plugins"
 
 	"github.com/BurntSushi/toml"
 	"github.com/haruno-bot/haruno/logger"
@@ -69,7 +67,8 @@ func (bot *haruno) Initialize() {
 	logger.Service.Initialize()
 	plugins.SetupPlugins()
 	coolq.Client.Initialize(bot.cqToken)
-	coolq.Client.Connect(bot.cqWSURL, bot.cqHTTPURL)
+	go coolq.Client.Connect(bot.cqWSURL, bot.cqHTTPURL)
+	go coolq.Client.RegisterAllPlugins()
 }
 
 // Status 运行状态json格式
