@@ -5,14 +5,9 @@
 ## 安装
 
 ```
-go get -v github.com/haruno-bot/haruno
-```
-
-或者自行编译安装
-
-```
-git clone https://github.com/haruno-bot/haruno.git
-go build
+$ git clone https://github.com/haruno-bot/haruno.git
+$ cd haruno
+$ go build
 ```
 
 ## 特性
@@ -42,4 +37,4 @@ go build
 
 ## License
 
-The MIT License
+[The MIT License](https://github.com/haruno-bot/haruno/blob/master/LICENSE)
