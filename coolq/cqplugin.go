@@ -14,8 +14,8 @@ type pluginInterface interface {
 }
 
 // PluginRegister 插件注册
-func PluginRegister(_plugin pluginInterface) {
-	entries = append(entries, _plugin)
+func PluginRegister(plugins ...pluginInterface) {
+	entries = append(entries, plugins...)
 }
 
 // Plugin 插件基础原型

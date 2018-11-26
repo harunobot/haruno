@@ -127,8 +127,8 @@ func NewMessage() Message {
 }
 
 // AddSection 向一个消息添加新的段落
-func AddSection(msg Message, section Section) Message {
-	return append(msg, section)
+func AddSection(msg Message, sections ...Section) Message {
+	return append(msg, sections...)
 }
 
 // NewSection 创建一个新的段落
