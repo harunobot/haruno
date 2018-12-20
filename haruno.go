@@ -1,18 +1,21 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/haruno-bot/haruno/coolq"
-	"github.com/haruno-bot/haruno/plugins"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/gorilla/mux"
+	"github.com/haruno-bot/haruno/coolq"
 	"github.com/haruno-bot/haruno/logger"
+	"github.com/haruno-bot/haruno/plugins"
 )
 
 type config struct {
@@ -37,6 +40,8 @@ type haruno struct {
 	cqToken   string
 	webRoot   string
 }
+
+const waitTime = time.Second * 15
 
 var bot = new(haruno)
 
@@ -93,23 +98,50 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 
 // Run 启动机器人
 func (bot *haruno) Run() {
+	r := mux.NewRouter()
+
 	if bot.webRoot != "" {
 		_, err := os.Stat(bot.webRoot)
 		if err == nil {
 			page := http.FileServer(http.Dir(bot.webRoot))
-			http.Handle("/", page)
+			r.Methods(http.MethodGet).Path("/").Handler(page)
+			r.Methods(http.MethodGet).PathPrefix("/static").Handler(page)
 		}
 	}
-	http.HandleFunc("/status", statusHandler)
-	http.HandleFunc("/logs/-/type=websocket", logger.WSLogHandler)
-	http.HandleFunc("/logs/-/type=plain", logger.RawLogHandler)
 
-	addr := fmt.Sprintf("127.0.0.1:%d", bot.port)
-	log.Printf("Haruno server works on http://%s.\n", addr)
-	err := http.ListenAndServe(addr, nil)
-	if err != nil {
-		log.Fatal("Haruno listen fialed", err)
+	r.Methods(http.MethodGet).Path("/status").HandlerFunc(statusHandler)
+	r.Methods(http.MethodGet).Path("/logs/-/type=websocket").HandlerFunc(logger.WSLogHandler)
+	r.Methods(http.MethodGet).Path("/logs/-/type=plain").HandlerFunc(logger.RawLogHandler)
+
+	srv := &http.Server{
+		Addr:         fmt.Sprintf("127.0.0.1:%d", bot.port),
+		WriteTimeout: time.Second * 15,
+		ReadTimeout:  time.Second * 15,
+		IdleTimeout:  time.Second * 60,
+		Handler:      r,
 	}
+
+	go func() {
+		log.Printf("Haruno server is working on http://localhost:%d\n", bot.port)
+		if err := srv.ListenAndServe(); err != nil {
+			log.Fatalln(err)
+		}
+	}()
+
+	c := make(chan os.Signal, 1)
+
+	signal.Notify(c, os.Interrupt, os.Kill)
+
+	<-c
+
+	ctx, cancel := context.WithTimeout(context.Background(), waitTime)
+	defer cancel()
+
+	srv.Shutdown(ctx)
+
+	log.Println("Haruno is shutting down")
+
+	os.Exit(0)
 }
 
 func main() {
