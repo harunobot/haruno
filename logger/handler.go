@@ -14,11 +14,11 @@ import (
 
 var (
 	// RequestParamError 请求log的参数错误
-	RequestParamError = []byte("请求参数错误")
+	RequestParamError = "请求参数错误"
 	// FileNotFoundError log文件不存在
-	FileNotFoundError = []byte("Log文件不存在")
+	FileNotFoundError = "Log文件不存在"
 	// InnerServerError 内部错误
-	InnerServerError = []byte("服务器内部错误")
+	InnerServerError = "服务器内部错误"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -66,31 +66,22 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 func RawLogHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	date := query.Get("date")
-	if date == "" {
-		w.WriteHeader(404)
-		w.Write(RequestParamError)
-		return
-	}
 	tim, err := time.Parse(logDateFormat, date)
-	if err != nil {
-		w.WriteHeader(404)
-		w.Write(RequestParamError)
+	if date == "" || err != nil {
+		http.Error(w, RequestParamError, 404)
 		return
 	}
-
 	logfileName := fmt.Sprintf("%s.log", tim.Format(logDateFormat))
 	logfilePath := path.Join(Service.LogsPath(), logfileName)
 	stat, err := os.Stat(logfilePath)
 	if err != nil && os.IsNotExist(err) {
-		w.WriteHeader(404)
-		w.Write(FileNotFoundError)
+		http.Error(w, FileNotFoundError, 404)
 		return
 	}
 	fp, err := os.OpenFile(logfilePath, os.O_RDONLY, 0600)
 	if err != nil {
 		log.Println(err)
-		w.WriteHeader(500)
-		w.Write(InnerServerError)
+		http.Error(w, InnerServerError, 500)
 		return
 	}
 	defer fp.Close()
