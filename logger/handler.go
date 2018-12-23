@@ -12,13 +12,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var (
-	// RequestParamError 请求log的参数错误
+const (
 	RequestParamError = "请求参数错误"
-	// FileNotFoundError log文件不存在
 	FileNotFoundError = "Log文件不存在"
-	// InnerServerError 内部错误
-	InnerServerError = "服务器内部错误"
+	InnerServerError  = "服务器内部错误"
 )
 
 var upgrader = websocket.Upgrader{}
