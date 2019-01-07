@@ -103,6 +103,7 @@ func (bot *haruno) Run() {
 	if bot.webRoot != "" {
 		_, err := os.Stat(bot.webRoot)
 		if err == nil {
+			log.Println("the web page root found in", fmt.Sprintf("\"%s\"", bot.webRoot))
 			page := http.FileServer(http.Dir(bot.webRoot))
 			r.Methods(http.MethodGet).Path("/").Handler(page)
 			r.Methods(http.MethodGet).PathPrefix("/static").Handler(page)
@@ -122,7 +123,7 @@ func (bot *haruno) Run() {
 	}
 
 	go func() {
-		log.Printf("Haruno server is working on http://localhost:%d\n", bot.port)
+		log.Printf("haruno server is working on http://localhost:%d\n", bot.port)
 		if err := srv.ListenAndServe(); err != nil {
 			log.Fatalln(err)
 		}
@@ -139,7 +140,7 @@ func (bot *haruno) Run() {
 
 	srv.Shutdown(ctx)
 
-	log.Println("Haruno is shutting down")
+	log.Println("haruno is shutting down")
 
 	os.Exit(0)
 }
