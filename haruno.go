@@ -47,7 +47,7 @@ var bot = new(haruno)
 
 func (bot *haruno) loadConfig() {
 	cfg := new(config)
-	_, err := toml.DecodeFile("./config.toml", cfg)
+	_, err := toml.DecodeFile("config.toml", cfg)
 	if err != nil {
 		log.Fatalln("Haruno Initialize fialed:", err)
 	}
@@ -91,7 +91,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	status.Success = logger.Service.Success()
 	status.Start = bot.startTime
 	status.Version = bot.version
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	status.Go = runtime.NumGoroutine()
 	json.NewEncoder(w).Encode(status)
 }
@@ -123,7 +123,7 @@ func (bot *haruno) Run() {
 	}
 
 	go func() {
-		log.Printf("haruno server is working on http://localhost:%d\n", bot.port)
+		log.Printf("haruno is listening on http://localhost:%d\n", bot.port)
 		if err := srv.ListenAndServe(); err != nil {
 			log.Fatalln(err)
 		}
