@@ -2,12 +2,12 @@ package clients
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/haruno-bot/haruno/logger"
 )
 
 // WSClient 拓展的websocket客户端，可以自动重连
@@ -109,7 +109,7 @@ func (c *WSClient) close() {
 		if err := c.Dial(c.url, c.headers); err == nil {
 			return
 		}
-		log.Println(c.Name, "has broken down, will reconnect after 5s.")
+		logger.Logger.Println(c.Name, "has broken down, will reconnect after 5s.")
 		time.Sleep(time.Second * 5)
 	}
 }

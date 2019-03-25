@@ -3,10 +3,10 @@ package logger
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -63,12 +63,21 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 func RawLogHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	date := query.Get("date")
+	logType := query.Get("type")
 	tim, err := time.Parse(logDateFormat, date)
 	if date == "" || err != nil {
 		http.Error(w, RequestParamError, 404)
 		return
 	}
 	logfileName := fmt.Sprintf("%s.log", tim.Format(logDateFormat))
+	if len(logType) != 0 {
+		if strings.ToLower(logType) == "error" {
+			logfileName = fmt.Sprintf("%s-%s.log", tim.Format(logDateFormat), logType)
+		} else {
+			http.Error(w, RequestParamError, 404)
+			return
+		}
+	}
 	logfilePath := path.Join(Service.LogsPath(), logfileName)
 	stat, err := os.Stat(logfilePath)
 	if err != nil && os.IsNotExist(err) {
@@ -77,7 +86,7 @@ func RawLogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fp, err := os.OpenFile(logfilePath, os.O_RDONLY, 0600)
 	if err != nil {
-		log.Println(err)
+		Logger.Println(err)
 		http.Error(w, InnerServerError, 500)
 		return
 	}

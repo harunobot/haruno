@@ -2,15 +2,19 @@ package logger
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"regexp"
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/gorilla/websocket"
 )
+
+// Logger 应用使用的 logger 实例
+var Logger = logrus.WithField("target", "haruno")
 
 // LogTypeInfo 信息类型
 const LogTypeInfo = 0
@@ -45,19 +49,22 @@ func NewLog(ltype int, text string) *Log {
 }
 
 type loggerService struct {
-	conns        map[*websocket.Conn]bool
-	success      int
-	fails        int
-	logsPath     string
-	logChan      chan *Log
-	logLock      sync.Mutex
-	logWriteLock sync.Mutex
-	wsConnLock   sync.Mutex
+	conns      map[*websocket.Conn]bool
+	success    int
+	fails      int
+	logsPath   string
+	logChan    chan *Log
+	logFT      string        // log时间格式
+	logN       *logrus.Entry // 正常log
+	logE       *logrus.Entry // 错误log
+	fpN        *os.File
+	fpE        *os.File
+	fpLock     sync.Mutex
+	wsConnLock sync.Mutex
 }
 
 // 时间格式等基本的常量
 const logDateFormat = "2006-01-02"
-const logTimeFormat = "2006-01-02 15:04:05 -0700"
 const pongWaitTime = 5 * time.Second
 
 // Service 单例实体
@@ -76,10 +83,13 @@ func (logger *loggerService) LogsPath() string {
 }
 
 // LogFile 获取当前log文件的位置
-func (logger *loggerService) LogFile() string {
+func (logger *loggerService) LogFile(scope string) string {
 	logspath := logger.LogsPath()
 	date := time.Now().Format(logDateFormat)
 	filename := fmt.Sprintf("%s.log", date)
+	if len(scope) != 0 {
+		filename = fmt.Sprintf("%s-%s.log", date, scope)
+	}
 	return path.Join(logspath, filename)
 }
 
@@ -91,6 +101,39 @@ func (logger *loggerService) Success() int {
 // Success 获取失败计数
 func (logger *loggerService) Fails() int {
 	return logger.fails
+}
+
+func (logger *loggerService) resetLogFiles() {
+	logger.logN.Logger.SetOutput(os.Stdout)
+	logger.logE.Logger.SetOutput(os.Stdout)
+	if logger.fpN != nil {
+		logger.fpN.Close()
+		logger.fpN = nil
+	}
+	if logger.fpE != nil {
+		logger.fpE.Close()
+		logger.fpE = nil
+	}
+}
+
+func (logger *loggerService) setLogFiles() {
+	var err error
+	logfileN := logger.LogFile("")
+	logfileE := logger.LogFile("error")
+	if logfileN != logger.logFT {
+		logger.resetLogFiles()
+		logger.logFT = logfileN
+		logger.fpN, err = os.OpenFile(logfileN, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			Logger.Fatal("Logger", err)
+		}
+		logger.fpE, err = os.OpenFile(logfileE, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			Logger.Fatal("Logger", err)
+		}
+		logger.logN.Logger.SetOutput(logger.fpN)
+		logger.logE.Logger.SetOutput(logger.fpE)
+	}
 }
 
 func escapeCRLF(s string) string {
@@ -109,43 +152,34 @@ func escapeHost(s string) string {
 
 // Add 往队列里加入一个新的log
 func (logger *loggerService) Add(lg *Log) {
+	// logger.fpLock.Lock()
+	// defer logger.fpLock.Unlock()
+	logger.setLogFiles()
 	lg.Text = escapeHost(lg.Text)
-	msg := escapeCRLF(lg.Text)
-	log.Println(msg)
-	logger.logLock.Lock()
+	logMsg := escapeCRLF(lg.Text)
 	switch lg.Type {
 	case LogTypeSuccess:
+		Logger.Println(logMsg)
+		logger.logN.Println(lg.Text)
 		logger.success++
 	case LogTypeError:
+		Logger.Errorln(logMsg)
+		logger.logE.Println(lg.Text)
 		logger.fails++
+	default:
+		Logger.Infoln(logMsg)
+		logger.logN.Infoln(lg.Text)
 	}
-	logger.writeToFile(lg)
 	logger.logChan <- lg
 	if len(logger.logChan) >= maxQueueSize {
 		<-logger.logChan
 	}
-	logger.logLock.Unlock()
 }
 
 // AddLog 往队列里加入一个新的log
 func (logger *loggerService) AddLog(ltype int, text string) {
 	lg := NewLog(ltype, text)
 	logger.Add(lg)
-}
-
-// writeToFile log写入文件
-func (logger *loggerService) writeToFile(lg *Log) {
-	logtime := time.Unix(lg.Time, 0).Format(logTimeFormat)
-	logfile := logger.LogFile()
-	fp, err := os.OpenFile(logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		log.Fatal("Logger", err)
-	}
-	logstr := fmt.Sprintf("%s - - %s - - %s\n", logtime, logTypeStr[lg.Type], lg.Text)
-	defer fp.Close()
-	logger.logWriteLock.Lock()
-	fp.WriteString(logstr)
-	logger.logWriteLock.Unlock()
 }
 
 func delConn(conn *websocket.Conn) {
@@ -182,24 +216,37 @@ func setupPong(conn *websocket.Conn, quit chan int) {
 func (logger *loggerService) Initialize() {
 	// 建立日志目录
 	if logger.logsPath == "" {
-		log.Fatal("LogsPath not set please use logger.Default.SetLogsPath func set it.")
+		Logger.Fatal("LogsPath not set please use logger.Default.SetLogsPath func set it.")
 	}
 	logspath := logger.LogsPath()
-	log.Printf("LogsPath = %s\n", logspath)
+	Logger.Printf("LogsPath = %s\n", logspath)
 	_, err := os.Stat(logspath)
 	if err != nil {
 		// 不存在目录的时候创建目录
 		if os.IsNotExist(err) {
-			log.Println("LogsPath is not existed.")
+			Logger.Println("LogsPath is not existed.")
 			err = os.Mkdir(logspath, 0700)
 			if err != nil {
-				log.Fatal("Logger", err)
+				Logger.Fatal("Logger", err)
 			}
-			log.Println("LogsPath created successfully.")
+			Logger.Println("LogsPath created successfully.")
 		}
 	}
 	// 创建连接池
 	logger.conns = make(map[*websocket.Conn]bool)
 	// 创建log管道
 	logger.logChan = make(chan *Log, maxQueueSize)
+	// 创建 logrus normal 实例
+	logger.logN = logrus.New().WithFields(logrus.Fields{
+		"target": "haruno",
+		"types":  []string{"success", "info"},
+	})
+	// 创建 logrus error 实例
+	logger.logE = logrus.New().WithFields(logrus.Fields{
+		"target": "haruno",
+		"types":  []string{"error"},
+	})
+	logger.logN.Logger.SetFormatter(&logrus.TextFormatter{})
+	logger.logE.Logger.SetFormatter(&logrus.TextFormatter{})
+	logger.setLogFiles()
 }

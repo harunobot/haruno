@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -49,7 +48,7 @@ func (bot *haruno) loadConfig() {
 	cfg := new(config)
 	_, err := toml.DecodeFile("config.toml", cfg)
 	if err != nil {
-		log.Fatalln("Haruno Initialize fialed:", err)
+		logger.Logger.Fatalln("Haruno Initialize fialed:", err)
 	}
 	bot.startTime = time.Now().UnixNano() / 1e6
 	bot.port = cfg.ServerPort
@@ -103,7 +102,7 @@ func (bot *haruno) Run() {
 	if bot.webRoot != "" {
 		_, err := os.Stat(bot.webRoot)
 		if err == nil {
-			log.Println("the web page root found in", fmt.Sprintf("\"%s\"", bot.webRoot))
+			logger.Logger.Println("the web page root found in", fmt.Sprintf("\"%s\"", bot.webRoot))
 			page := http.FileServer(http.Dir(bot.webRoot))
 			r.Methods(http.MethodGet).Path("/").Handler(page)
 			r.Methods(http.MethodGet).PathPrefix("/static").Handler(page)
@@ -123,9 +122,9 @@ func (bot *haruno) Run() {
 	}
 
 	go func() {
-		log.Printf("haruno is listening on http://localhost:%d\n", bot.port)
+		logger.Logger.Printf("haruno is listening on http://localhost:%d\n", bot.port)
 		if err := srv.ListenAndServe(); err != nil {
-			log.Fatalln(err)
+			logger.Logger.Fatalln(err)
 		}
 	}()
 
@@ -140,7 +139,7 @@ func (bot *haruno) Run() {
 
 	srv.Shutdown(ctx)
 
-	log.Println("haruno is shutting down")
+	logger.Logger.Println("haruno is shutting down")
 
 	os.Exit(0)
 }

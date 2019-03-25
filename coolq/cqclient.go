@@ -3,7 +3,6 @@ package coolq
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -84,7 +83,7 @@ func (c *cqclient) RegisterAllPlugins() {
 		for key, filter := range pluginFilters {
 			handler := pluginHandlers[key]
 			if handler == nil {
-				fmt.Printf("[WARN] 插件 %s 中存在没有使用的key: %s\n", pluginName, key)
+				logger.Logger.Warnf("插件 %s 中存在没有使用的key: %s\n", pluginName, key)
 				continue
 			}
 			hasFilter[key] = true
@@ -295,7 +294,7 @@ func (c *cqclient) SetGroupWholeBan(groupID int64, enable bool) {
 }
 
 func warnHTTPApiURLNotSet() {
-	log.Println("[WARNING] Try to request a http api url, but no http api url was set.")
+	logger.Logger.Warnln("Try to request a http api url, but no http api url was set.")
 }
 
 func (c *cqclient) getAPIURL(api string) string {
