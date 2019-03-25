@@ -14,7 +14,7 @@ import (
 )
 
 // Logger 应用使用的 logger 实例
-var Logger = logrus.WithField("target", "haruno")
+var Logger = logrus.New().WithField("target", "haruno")
 
 // LogTypeInfo 信息类型
 const LogTypeInfo = 0
@@ -49,18 +49,17 @@ func NewLog(ltype int, text string) *Log {
 }
 
 type loggerService struct {
-	conns      map[*websocket.Conn]bool
-	success    int
-	fails      int
-	logsPath   string
-	logChan    chan *Log
-	logFT      string        // log时间格式
-	logN       *logrus.Entry // 正常log
-	logE       *logrus.Entry // 错误log
-	fpN        *os.File
-	fpE        *os.File
-	fpLock     sync.Mutex
-	wsConnLock sync.Mutex
+	conns    map[*websocket.Conn]bool
+	success  int
+	fails    int
+	logsPath string
+	logChan  chan *Log
+	logLT    string
+	fpN      *os.File
+	fpE      *os.File
+	logN     *logrus.Entry
+	logE     *logrus.Entry
+	wscLock  sync.Mutex
 }
 
 // 时间格式等基本的常量
@@ -78,19 +77,17 @@ func (logger *loggerService) SetLogsPath(p string) {
 // LogsPath 获取logs文件的绝对路径
 func (logger *loggerService) LogsPath() string {
 	pwd, _ := os.Getwd()
-	logspath := path.Join(pwd, logger.logsPath)
-	return logspath
+	return path.Join(pwd, logger.logsPath)
 }
 
 // LogFile 获取当前log文件的位置
 func (logger *loggerService) LogFile(scope string) string {
-	logspath := logger.LogsPath()
 	date := time.Now().Format(logDateFormat)
 	filename := fmt.Sprintf("%s.log", date)
 	if len(scope) != 0 {
 		filename = fmt.Sprintf("%s-%s.log", date, scope)
 	}
-	return path.Join(logspath, filename)
+	return path.Join(logger.LogsPath(), filename)
 }
 
 // Success 获取成功计数
@@ -103,35 +100,37 @@ func (logger *loggerService) Fails() int {
 	return logger.fails
 }
 
-func (logger *loggerService) resetLogFiles() {
-	logger.logN.Logger.SetOutput(os.Stdout)
-	logger.logE.Logger.SetOutput(os.Stdout)
-	if logger.fpN != nil {
-		logger.fpN.Close()
-		logger.fpN = nil
-	}
-	if logger.fpE != nil {
-		logger.fpE.Close()
-		logger.fpE = nil
-	}
-}
-
-func (logger *loggerService) setLogFiles() {
+func (logger *loggerService) sLogFiles() {
 	var err error
+	var oldfp *os.File
 	logfileN := logger.LogFile("")
-	logfileE := logger.LogFile("error")
-	if logfileN != logger.logFT {
-		logger.resetLogFiles()
-		logger.logFT = logfileN
+	if logfileN != logger.logLT {
+		logger.logLT = logfileN
+
+		oldfp = logger.fpN
 		logger.fpN, err = os.OpenFile(logfileN, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
-			Logger.Fatal("Logger", err)
-		}
-		logger.fpE, err = os.OpenFile(logfileE, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-		if err != nil {
-			Logger.Fatal("Logger", err)
+			Logger.Fatalln(err)
 		}
 		logger.logN.Logger.SetOutput(logger.fpN)
+		if oldfp != nil {
+			err = oldfp.Close()
+			if err != nil {
+				Logger.Fatalln(err)
+			}
+		}
+
+		oldfp = logger.fpE
+		logger.fpE, err = os.OpenFile(logger.LogFile("error"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			Logger.Fatalln(err)
+		}
+		if oldfp != nil {
+			err = oldfp.Close()
+			if err != nil {
+				Logger.Fatalln(err)
+			}
+		}
 		logger.logE.Logger.SetOutput(logger.fpE)
 	}
 }
@@ -152,20 +151,18 @@ func escapeHost(s string) string {
 
 // Add 往队列里加入一个新的log
 func (logger *loggerService) Add(lg *Log) {
-	// logger.fpLock.Lock()
-	// defer logger.fpLock.Unlock()
-	logger.setLogFiles()
+	logger.sLogFiles()
 	lg.Text = escapeHost(lg.Text)
 	logMsg := escapeCRLF(lg.Text)
 	switch lg.Type {
 	case LogTypeSuccess:
+		logger.success++
 		Logger.Println(logMsg)
 		logger.logN.Println(lg.Text)
-		logger.success++
 	case LogTypeError:
+		logger.fails++
 		Logger.Errorln(logMsg)
 		logger.logE.Println(lg.Text)
-		logger.fails++
 	default:
 		Logger.Infoln(logMsg)
 		logger.logN.Infoln(lg.Text)
@@ -178,14 +175,13 @@ func (logger *loggerService) Add(lg *Log) {
 
 // AddLog 往队列里加入一个新的log
 func (logger *loggerService) AddLog(ltype int, text string) {
-	lg := NewLog(ltype, text)
-	logger.Add(lg)
+	logger.Add(NewLog(ltype, text))
 }
 
 func delConn(conn *websocket.Conn) {
-	Service.wsConnLock.Lock()
+	Service.wscLock.Lock()
 	delete(Service.conns, conn)
-	Service.wsConnLock.Unlock()
+	Service.wscLock.Unlock()
 }
 
 func setupPong(conn *websocket.Conn, quit chan int) {
@@ -248,5 +244,5 @@ func (logger *loggerService) Initialize() {
 	})
 	logger.logN.Logger.SetFormatter(&logrus.TextFormatter{})
 	logger.logE.Logger.SetFormatter(&logrus.TextFormatter{})
-	logger.setLogFiles()
+	logger.sLogFiles()
 }
