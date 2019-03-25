@@ -1,3 +1,3 @@
-[submodule "browser"]
-	path = browser
+[submodule "webui"]
+	path = webui
 	url = git@github.com:haruno-bot/haruno-fe.git

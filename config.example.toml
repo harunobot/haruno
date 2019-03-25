@@ -2,7 +2,7 @@
 # 全局基础配置
 version = "0.0.2" # 版本号
 logsPath = "logs" # 日志文件路径
-webroot = "browser/dist"
+webroot = "webui/dist"
 serverPort = 8080 # 服务端口号
 cqWSURL = "ws_url"
 cqHTTPURL = "http_url"
