@@ -14,7 +14,7 @@ import (
 )
 
 // Logger 应用使用的 logger 实例
-var Logger = logrus.New().WithField("target", "haruno")
+var Logger = logrus.New().WithField("name", "haruno")
 
 // LogTypeInfo 信息类型
 const LogTypeInfo = 0
@@ -55,9 +55,10 @@ type loggerService struct {
 	logsPath string
 	logChan  chan *Log
 	logLT    string
-	fpN      *os.File
+	fpSI     *os.File
 	fpE      *os.File
-	logN     *logrus.Entry
+	logS     *logrus.Entry
+	logI     *logrus.Entry
 	logE     *logrus.Entry
 	wscLock  sync.Mutex
 }
@@ -102,26 +103,29 @@ func (logger *loggerService) Fails() int {
 
 func (logger *loggerService) sLogFiles() {
 	var err error
+	var newfp *os.File
 	var oldfp *os.File
 	logfileN := logger.LogFile("")
 	if logfileN != logger.logLT {
 		logger.logLT = logfileN
 
-		oldfp = logger.fpN
-		logger.fpN, err = os.OpenFile(logfileN, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+		oldfp = logger.fpSI
+		newfp, err = os.OpenFile(logfileN, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
 			Logger.Fatalln(err)
 		}
-		logger.logN.Logger.SetOutput(logger.fpN)
 		if oldfp != nil {
 			err = oldfp.Close()
 			if err != nil {
 				Logger.Fatalln(err)
 			}
 		}
+		logger.logS.Logger.SetOutput(newfp)
+		logger.logI.Logger.SetOutput(newfp)
+		logger.fpSI = newfp
 
 		oldfp = logger.fpE
-		logger.fpE, err = os.OpenFile(logger.LogFile("error"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+		newfp, err = os.OpenFile(logger.LogFile("error"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
 			Logger.Fatalln(err)
 		}
@@ -132,6 +136,7 @@ func (logger *loggerService) sLogFiles() {
 			}
 		}
 		logger.logE.Logger.SetOutput(logger.fpE)
+		logger.fpE = newfp
 	}
 }
 
@@ -157,15 +162,15 @@ func (logger *loggerService) Add(lg *Log) {
 	switch lg.Type {
 	case LogTypeSuccess:
 		logger.success++
-		Logger.Println(logMsg)
-		logger.logN.Println(lg.Text)
+		Logger.WithField("type", "success").Println(logMsg)
+		logger.logS.Println(lg.Text)
 	case LogTypeError:
 		logger.fails++
-		Logger.Errorln(logMsg)
+		Logger.WithField("type", "error").Errorln(logMsg)
 		logger.logE.Println(lg.Text)
 	default:
-		Logger.Infoln(logMsg)
-		logger.logN.Infoln(lg.Text)
+		Logger.WithField("type", "info").Println(logMsg)
+		logger.logI.Println(lg.Text)
 	}
 	logger.logChan <- lg
 	if len(logger.logChan) >= maxQueueSize {
@@ -232,17 +237,23 @@ func (logger *loggerService) Initialize() {
 	logger.conns = make(map[*websocket.Conn]bool)
 	// 创建log管道
 	logger.logChan = make(chan *Log, maxQueueSize)
-	// 创建 logrus normal 实例
-	logger.logN = logrus.New().WithFields(logrus.Fields{
-		"target": "haruno",
-		"types":  []string{"success", "info"},
+	// 创建 logrus success 实例
+	logger.logS = logrus.New().WithFields(logrus.Fields{
+		"name": "haruno",
+		"type": "success",
+	})
+	// 创建 logrus info 实例
+	logger.logI = logrus.New().WithFields(logrus.Fields{
+		"name": "haruno",
+		"type": "info",
 	})
 	// 创建 logrus error 实例
 	logger.logE = logrus.New().WithFields(logrus.Fields{
-		"target": "haruno",
-		"types":  []string{"error"},
+		"name": "haruno",
+		"type": "error",
 	})
-	logger.logN.Logger.SetFormatter(&logrus.TextFormatter{})
+	logger.logS.Logger.SetFormatter(&logrus.TextFormatter{})
+	logger.logI.Logger.SetFormatter(&logrus.TextFormatter{})
 	logger.logE.Logger.SetFormatter(&logrus.TextFormatter{})
 	logger.sLogFiles()
 }
