@@ -154,13 +154,12 @@ func (c *cqclient) Initialize(token string) {
 			// 先异步处理没有key的回调
 			go entry.handlers[noFilterKey](event)
 			// 一次异步执行所有的 filter 和 handler 对
-			for key, filterFunc := range entry.fitlers {
-				handleFunc := entry.handlers[key]
-				go func(filterFunc *Filter) {
-					if (*filterFunc)(event) {
-						handleFunc(event)
+			for key := range entry.fitlers {
+				go func(key string) {
+					if entry.fitlers[key](event) {
+						entry.handlers[key](event)
 					}
-				}(&filterFunc)
+				}(key)
 			}
 		}
 	}
