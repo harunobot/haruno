@@ -49,9 +49,7 @@ func handleConnect(conn *clients.WSClient) {
 }
 
 func handleError(err error) {
-	msgText := err.Error()
-	errMsg := logger.NewLog(logger.LogTypeError, msgText)
-	logger.Service.Add(errMsg)
+	logger.Service.AddLog(logger.LogTypeError, fmt.Sprintf("cqclient error: %s", err.Error()))
 }
 
 // RegisterAllPlugins 注册所有的插件
@@ -61,8 +59,7 @@ func (c *cqclient) RegisterAllPlugins() {
 	for _, plug := range entries {
 		err := plug.Load()
 		if err != nil {
-			errMsg := fmt.Sprintf("Plugin %s can't be loaded, reason:\n %s", plug.Name(), err.Error())
-			logger.Service.AddLog(logger.LogTypeError, errMsg)
+			logger.Service.AddLog(logger.LogTypeError, fmt.Sprintf("Plugin %s can't be loaded, reason:\n %s", plug.Name(), err.Error()))
 			continue
 		}
 		loaded = append(loaded, plug)
@@ -130,7 +127,7 @@ func (c *cqclient) Initialize(token string) {
 		msg := new(CQResponse)
 		err := json.Unmarshal(raw, msg)
 		if err != nil {
-			logger.Service.AddLog(logger.LogTypeError, err.Error())
+			logger.Service.AddLog(logger.LogTypeError, fmt.Sprintf("API conn on message erorr: %s", err.Error()))
 			return
 		}
 		// echo队列 - 确定发送消息是否超时
@@ -146,8 +143,7 @@ func (c *cqclient) Initialize(token string) {
 		event := new(CQEvent)
 		err := json.Unmarshal(raw, event)
 		if err != nil {
-			errMsg := err.Error()
-			logger.Service.AddLog(logger.LogTypeError, errMsg)
+			logger.Service.AddLog(logger.LogTypeError, fmt.Sprintf("Event conn on message erorr: %s", err.Error()))
 			return
 		}
 		for _, entry := range c.pluginEntries {
@@ -310,16 +306,14 @@ func (c *cqclient) GetStatus() *CQTypeGetStatus {
 	url := c.getAPIURL(ActionGetStatus)
 	res, err := c.httpConn.Get(url)
 	if err != nil {
-		errMsg := err.Error()
-		logger.Service.AddLog(logger.LogTypeError, errMsg)
+		logger.Service.AddLog(logger.LogTypeError, fmt.Sprintf("cqclient http method getStatus error: %s", err.Error()))
 		return nil
 	}
 	defer res.Body.Close()
 	response := new(CQResponse)
 	err = json.NewDecoder(res.Body).Decode(response)
 	if err != nil {
-		errMsg := err.Error()
-		logger.Service.AddLog(logger.LogTypeError, errMsg)
+		logger.Service.AddLog(logger.LogTypeError, fmt.Sprintf("cqclient http method getStatus error: %s", err.Error()))
 		return nil
 	}
 	if response.RetCode != 0 {

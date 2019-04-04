@@ -24,7 +24,7 @@ var upgrader = websocket.Upgrader{}
 func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		Service.AddLog(LogTypeError, err.Error())
+		Service.AddLog(LogTypeError, "Logger WSLogHandler error: %s", err.Error())
 		return
 	}
 	var welMsg = NewLog(LogTypeInfo, "Logger服务连接成功!")
