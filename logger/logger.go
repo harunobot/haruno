@@ -135,7 +135,7 @@ func (logger *loggerService) sLogFiles() {
 				Logger.Fatalln(err)
 			}
 		}
-		logger.logE.Logger.SetOutput(logger.fpE)
+		logger.logE.Logger.SetOutput(newfp)
 		logger.fpE = newfp
 	}
 }
