@@ -128,7 +128,7 @@ func (c *WSClient) setupPing(quit chan int) {
 			case <-quit:
 				return
 			case <-pingTicker.C:
-				if c.Send(websocket.PingMessage, pingMsg) != nil {
+				if c.Send(websocket.PingMessage, pingMsg) != nil && !c.closed {
 					close(quit)
 				}
 			}
