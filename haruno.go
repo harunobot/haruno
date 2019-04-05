@@ -86,8 +86,8 @@ type Status struct {
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	status := new(Status)
-	status.Fails = logger.Service.Fails()
-	status.Success = logger.Service.Success()
+	status.Fails = logger.Service.FailCnt()
+	status.Success = logger.Service.SuccessCnt()
 	status.Start = bot.startTime
 	status.Version = bot.version
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")

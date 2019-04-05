@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// 错误消息
 const (
 	RequestParamError = "请求参数错误"
 	FileNotFoundError = "Log文件不存在"
@@ -24,7 +25,7 @@ var upgrader = websocket.Upgrader{}
 func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		Service.AddLog(LogTypeError, fmt.Sprintf("Logger WSLogHandler error: %s", err.Error()))
+		Service.Errorf("Logger WSLogHandler error: %s", err.Error())
 		return
 	}
 	var welMsg = NewLog(LogTypeInfo, "Logger服务连接成功!")

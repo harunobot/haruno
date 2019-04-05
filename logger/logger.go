@@ -92,12 +92,12 @@ func (logger *loggerService) LogFile(scope string) string {
 }
 
 // Success 获取成功计数
-func (logger *loggerService) Success() int {
+func (logger *loggerService) SuccessCnt() int {
 	return logger.success
 }
 
 // Success 获取失败计数
-func (logger *loggerService) Fails() int {
+func (logger *loggerService) FailCnt() int {
 	return logger.fails
 }
 
@@ -181,6 +181,36 @@ func (logger *loggerService) Add(lg *Log) {
 // AddLog 往队列里加入一个新的log
 func (logger *loggerService) AddLog(ltype int, text string) {
 	logger.Add(NewLog(ltype, text))
+}
+
+// Success 成功log
+func (logger *loggerService) Success(text string) {
+	logger.AddLog(LogTypeSuccess, text)
+}
+
+// Success 格式化成功log
+func (logger *loggerService) Successf(format string, args ...interface{}) {
+	logger.AddLog(LogTypeSuccess, fmt.Sprintf(format, args...))
+}
+
+// Info 信息log
+func (logger *loggerService) Info(text string) {
+	logger.AddLog(LogTypeInfo, text)
+}
+
+// Info 格式化信息log
+func (logger *loggerService) Infof(format string, args ...interface{}) {
+	logger.AddLog(LogTypeInfo, fmt.Sprintf(format, args...))
+}
+
+// Error 错误log
+func (logger *loggerService) Error(text string) {
+	logger.AddLog(LogTypeError, text)
+}
+
+// Errorf 格式化错误log
+func (logger *loggerService) Errorf(format string, args ...interface{}) {
+	logger.AddLog(LogTypeError, fmt.Sprintf(format, args...))
 }
 
 func delConn(conn *websocket.Conn) {
