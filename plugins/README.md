@@ -76,9 +76,32 @@ type MyPlugin struct {
 
 > 并不是同步的日志，即使是websocket方式，也是要通过管道发送。
 
-日志会每隔30s清空队列，并持久化。
+<del>日志会每隔30s清空队列，并持久化。</del>
 
-基本使用方法：
+日志最大会在管道内保存5条，即打开web端页面能看到最新的5条日志信息。
+
+
+### 常用方法
+
+#### logger.Service.Success(text string)
+
+记录一条成功的信息。
+
+#### logger.Service.Successf(format string, args ...interface{})
+
+使用格式化字符串的方法记录一条成功的信息。
+
+类似的方法还有：Info, Infof(信息), Error和Errorf(错误)。
+
+#### logger.Service.Field(name string)
+
+创建一个带field的logger，此时所有的日志都会使用下面的方式输出。
+
+```go
+fmt.Sprintf("%s: %s" field, text)
+```
+
+### <del>基本</del>底层方法：
 
 #### logger.Service.AddLog(ltype int, text string)
 
