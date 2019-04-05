@@ -123,7 +123,8 @@ func (bot *haruno) Run() {
 
 	go func() {
 		logger.Logger.Printf("haruno is listening on http://localhost:%d\n", bot.port)
-		if err := srv.ListenAndServe(); err != nil {
+
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 			logger.Logger.Fatalln(err)
 		}
 	}()
