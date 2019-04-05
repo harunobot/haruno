@@ -48,6 +48,51 @@ func NewLog(ltype int, text string) *Log {
 	}
 }
 
+type loggerInterface interface {
+	Success(string)
+	Successf(string, ...interface{})
+	Info(string)
+	Infof(string, ...interface{})
+	Error(string)
+	Errorf(string, ...interface{})
+}
+
+type loggerWithField struct {
+	field   string
+	service *loggerService
+	loggerInterface
+}
+
+// Success 成功log
+func (logger *loggerWithField) Success(text string) {
+	logger.service.Successf("%s: %s", logger.field, text)
+}
+
+// Success 格式化成功log
+func (logger *loggerWithField) Successf(format string, args ...interface{}) {
+	logger.service.Successf("%s: %s", logger.field, fmt.Sprintf(format, args...))
+}
+
+// Info 信息log
+func (logger *loggerWithField) Info(text string) {
+	logger.service.Infof("%s: %s", logger.field, text)
+}
+
+// Infof 格式化信息log
+func (logger *loggerWithField) Infof(format string, args ...interface{}) {
+	logger.service.Infof("%s: %s", logger.field, fmt.Sprintf(format, args...))
+}
+
+// Error 错误log
+func (logger *loggerWithField) Error(text string) {
+	logger.service.Errorf("%s: %s", logger.field, text)
+}
+
+// Errorf 格式化错误log
+func (logger *loggerWithField) Errorf(format string, args ...interface{}) {
+	logger.service.Errorf("%s: %s", logger.field, fmt.Sprintf(format, args...))
+}
+
 type loggerService struct {
 	conns    map[*websocket.Conn]bool
 	success  int
@@ -61,6 +106,7 @@ type loggerService struct {
 	logI     *logrus.Entry
 	logE     *logrus.Entry
 	wscLock  sync.Mutex
+	loggerInterface
 }
 
 // 时间格式等基本的常量
@@ -181,6 +227,11 @@ func (logger *loggerService) Add(lg *Log) {
 // AddLog 往队列里加入一个新的log
 func (logger *loggerService) AddLog(ltype int, text string) {
 	logger.Add(NewLog(ltype, text))
+}
+
+// Field 设置logger的域
+func (logger *loggerService) Field(name string) loggerInterface {
+	return &loggerWithField{field: name, service: logger}
 }
 
 // Success 成功log
