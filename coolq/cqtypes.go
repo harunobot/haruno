@@ -96,8 +96,8 @@ func Unmarshal(raw []byte, msg *Message) error {
 			cqCode = strings.TrimPrefix(cqCode, "[")
 			cqCode = strings.TrimSuffix(cqCode, "]")
 			payloads := strings.Split(cqCode, ",")
-			filedLen := len(payloads)
-			if filedLen < 2 {
+			fieldLen := len(payloads)
+			if fieldLen < 2 {
 				msg = nil
 				return errors.New("syntax error: invalid cqcode, expecting one field at least")
 			}
@@ -110,7 +110,7 @@ func Unmarshal(raw []byte, msg *Message) error {
 				Type: cqType[1],
 				Data: map[string]string{},
 			}
-			for i := 1; i < filedLen; i++ {
+			for i := 1; i < fieldLen; i++ {
 				pair := strings.Split(payloads[i], "=")
 				section.Data[pair[0]] = strings.Join(pair[1:], "")
 			}
