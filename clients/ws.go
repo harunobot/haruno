@@ -22,6 +22,7 @@ type WSClient struct {
 	conn      *websocket.Conn
 	url       string
 	closed    bool
+	quited    bool
 	dialer    *websocket.Dialer
 	mu        sync.Mutex
 }
@@ -45,6 +46,7 @@ func (c *WSClient) Dial(url string, headers http.Header) error {
 		return err
 	}
 	c.closed = false
+	c.quited = false
 	if c.OnConnect != nil {
 		go c.OnConnect(c)
 	}
@@ -126,9 +128,10 @@ func (c *WSClient) setupPing(quit chan int) {
 			}
 			select {
 			case <-quit:
+				c.quited = true
 				return
 			case <-pingTicker.C:
-				if c.Send(websocket.PingMessage, pingMsg) != nil && !c.closed {
+				if c.Send(websocket.PingMessage, pingMsg) != nil && !c.quited {
 					close(quit)
 				}
 			}
