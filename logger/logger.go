@@ -48,7 +48,8 @@ func NewLog(ltype int, text string) *Log {
 	}
 }
 
-type loggerInterface interface {
+// LogInterface 基础的logger接口
+type LogInterface interface {
 	Success(string)
 	Successf(string, ...interface{})
 	Info(string)
@@ -60,7 +61,7 @@ type loggerInterface interface {
 type loggerWithField struct {
 	field   string
 	service *loggerService
-	loggerInterface
+	LogInterface
 }
 
 // Success 成功log
@@ -106,7 +107,7 @@ type loggerService struct {
 	logI     *logrus.Entry
 	logE     *logrus.Entry
 	wscLock  sync.Mutex
-	loggerInterface
+	LogInterface
 }
 
 // 时间格式等基本的常量
@@ -230,7 +231,7 @@ func (logger *loggerService) AddLog(ltype int, text string) {
 }
 
 // Field 设置logger的域
-func (logger *loggerService) Field(name string) loggerInterface {
+func (logger *loggerService) Field(name string) LogInterface {
 	return &loggerWithField{field: name, service: logger}
 }
 
@@ -239,7 +240,7 @@ func (logger *loggerService) Success(text string) {
 	logger.AddLog(LogTypeSuccess, text)
 }
 
-// Success 格式化成功log
+// Successf 格式化成功log
 func (logger *loggerService) Successf(format string, args ...interface{}) {
 	logger.AddLog(LogTypeSuccess, fmt.Sprintf(format, args...))
 }
@@ -249,7 +250,7 @@ func (logger *loggerService) Info(text string) {
 	logger.AddLog(LogTypeInfo, text)
 }
 
-// Info 格式化信息log
+// Infof 格式化信息log
 func (logger *loggerService) Infof(format string, args ...interface{}) {
 	logger.AddLog(LogTypeInfo, fmt.Sprintf(format, args...))
 }

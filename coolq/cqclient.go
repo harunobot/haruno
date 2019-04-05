@@ -43,12 +43,12 @@ type cqclient struct {
 
 func handleConnect(conn *clients.WSClient) {
 	if conn.IsConnected() {
-		logger.Service.Infof("%s服务已成功连接！", conn.Name)
+		logger.Infof("%s服务已成功连接！", conn.Name)
 	}
 }
 
 func handleError(err error) {
-	logger.Service.Errorf("cqclient error: %s", err.Error())
+	logger.Errorf("cqclient error: %s", err.Error())
 }
 
 // RegisterAllPlugins 注册所有的插件
@@ -58,7 +58,7 @@ func (c *cqclient) RegisterAllPlugins() {
 	for _, plug := range entries {
 		err := plug.Load()
 		if err != nil {
-			logger.Service.Errorf("Plugin %s can't be loaded, reason:\n %s", plug.Name(), err.Error())
+			logger.Errorf("Plugin %s can't be loaded, reason:\n %s", plug.Name(), err.Error())
 			continue
 		}
 		loaded = append(loaded, plug)
@@ -126,7 +126,7 @@ func (c *cqclient) Initialize(token string) {
 		msg := new(CQResponse)
 		err := json.Unmarshal(raw, msg)
 		if err != nil {
-			logger.Service.Errorf("API conn on message erorr: %s", err.Error())
+			logger.Errorf("API conn on message erorr: %s", err.Error())
 			return
 		}
 		// echo队列 - 确定发送消息是否超时
@@ -142,7 +142,7 @@ func (c *cqclient) Initialize(token string) {
 		event := new(CQEvent)
 		err := json.Unmarshal(raw, event)
 		if err != nil {
-			logger.Service.Errorf("Event conn on message erorr: %s", err.Error())
+			logger.Errorf("Event conn on message erorr: %s", err.Error())
 			return
 		}
 		for _, entry := range c.pluginEntries {
@@ -170,7 +170,7 @@ func (c *cqclient) Initialize(token string) {
 				for echo, state := range c.echoqueue {
 					// 对于超过30s未响应的给出提示
 					if state && now-echo > timeForWait {
-						logger.Service.Errorf("Echo = %d 响应超时(30s).", echo)
+						logger.Errorf("Echo = %d 响应超时(30s).", echo)
 						c.mu.Lock()
 						delete(c.echoqueue, echo)
 						c.mu.Unlock()
@@ -305,14 +305,14 @@ func (c *cqclient) GetStatus() *CQTypeGetStatus {
 	url := c.getAPIURL(ActionGetStatus)
 	res, err := c.httpConn.Get(url)
 	if err != nil {
-		logger.Service.Errorf("cqclient http method getStatus error: %s", err.Error())
+		logger.Errorf("cqclient http method getStatus error: %s", err.Error())
 		return nil
 	}
 	defer res.Body.Close()
 	response := new(CQResponse)
 	err = json.NewDecoder(res.Body).Decode(response)
 	if err != nil {
-		logger.Service.Errorf("cqclient http method getStatus error: %s", err.Error())
+		logger.Errorf("cqclient http method getStatus error: %s", err.Error())
 		return nil
 	}
 	if response.RetCode != 0 {
