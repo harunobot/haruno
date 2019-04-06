@@ -66,7 +66,7 @@ func (c *WSClient) Dial(url string, headers http.Header) error {
 			go c.onMsg(msg)
 		}
 	}()
-	c.setupPing()
+	go c.setupPing()
 	return nil
 }
 
@@ -126,20 +126,18 @@ func (c *WSClient) close() {
 func (c *WSClient) setupPing() {
 	pingTicker := time.NewTicker(time.Second * 5)
 	pingMsg := []byte("")
-	go func() {
-		defer pingTicker.Stop()
-		defer c.close()
-		for {
-			select {
-			case <-c.rquit:
+	defer pingTicker.Stop()
+	defer c.close()
+	for {
+		select {
+		case <-c.rquit:
+			return
+		case <-c.wquit:
+			return
+		case <-pingTicker.C:
+			if c.Send(websocket.PingMessage, pingMsg) != nil {
 				return
-			case <-c.wquit:
-				return
-			case <-pingTicker.C:
-				if c.Send(websocket.PingMessage, pingMsg) != nil {
-					return
-				}
 			}
 		}
-	}()
+	}
 }
