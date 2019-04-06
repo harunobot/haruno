@@ -22,9 +22,10 @@ type WSClient struct {
 	conn      *websocket.Conn
 	url       string
 	closed    bool
-	quited    bool
+	quit      chan int
 	dialer    *websocket.Dialer
-	mu        sync.Mutex
+	mmu       sync.Mutex
+	cmu       sync.Mutex
 }
 
 // Dial 设置和远程服务器链接
@@ -46,11 +47,10 @@ func (c *WSClient) Dial(url string, headers http.Header) error {
 		return err
 	}
 	c.closed = false
-	c.quited = false
+	c.quit = make(chan int)
 	if c.OnConnect != nil {
 		go c.OnConnect(c)
 	}
-	quit := make(chan int)
 	go func() {
 		for {
 			var msg []byte
@@ -58,13 +58,13 @@ func (c *WSClient) Dial(url string, headers http.Header) error {
 				if c.OnError != nil {
 					go c.OnError(err)
 				}
-				close(quit)
+				close(c.quit)
 				return
 			}
 			go c.onMsg(msg)
 		}
 	}()
-	c.setupPing(quit)
+	c.setupPing()
 	return nil
 }
 
@@ -73,11 +73,11 @@ func (c *WSClient) Send(msgType int, msg []byte) error {
 	if c.closed {
 		return errors.New("can not use closed connection")
 	}
-	c.mu.Lock()
+	c.mmu.Lock()
 	err := c.conn.WriteMessage(msgType, msg)
-	c.mu.Unlock()
+	c.mmu.Unlock()
 	if err != nil {
-		c.close()
+		defer c.close()
 		if c.OnError != nil {
 			c.OnError(err)
 		}
@@ -103,6 +103,11 @@ func (c *WSClient) onMsg(msg []byte) {
 }
 
 func (c *WSClient) close() {
+	c.cmu.Lock()
+	defer c.cmu.Unlock()
+	if c.closed {
+		return
+	}
 	if c.conn != nil {
 		c.conn.Close()
 	}
@@ -116,23 +121,18 @@ func (c *WSClient) close() {
 	}
 }
 
-func (c *WSClient) setupPing(quit chan int) {
+func (c *WSClient) setupPing() {
 	pingTicker := time.NewTicker(time.Second * 5)
 	pingMsg := []byte("")
 	go func() {
 		defer pingTicker.Stop()
-		defer c.close()
 		for {
-			if c.closed {
-				return
-			}
 			select {
-			case <-quit:
-				c.quited = true
+			case <-c.quit:
 				return
 			case <-pingTicker.C:
-				if c.Send(websocket.PingMessage, pingMsg) != nil && !c.quited {
-					close(quit)
+				if c.Send(websocket.PingMessage, pingMsg) != nil {
+					return
 				}
 			}
 		}
