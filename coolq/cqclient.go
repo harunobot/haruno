@@ -24,6 +24,7 @@ type Filter func(*CQEvent) bool
 type Handler func(*CQEvent)
 
 type pluginEntry struct {
+	keys     []string
 	fitlers  map[string]Filter
 	handlers map[string]Handler
 }
@@ -71,6 +72,7 @@ func (c *cqclient) RegisterAllPlugins() {
 		pluginHandlers := plug.Handlers()
 		hasFilter := make(map[string]bool)
 		entry := pluginEntry{
+			keys:     make([]string, 0),
 			fitlers:  make(map[string]Filter),
 			handlers: make(map[string]Handler),
 		}
@@ -83,6 +85,7 @@ func (c *cqclient) RegisterAllPlugins() {
 				continue
 			}
 			hasFilter[key] = true
+			entry.keys = append(entry.keys, key)
 			entry.fitlers[key] = filter
 			entry.handlers[key] = handler
 		}
@@ -145,16 +148,16 @@ func (c *cqclient) Initialize(token string) {
 			logger.Errorf("Event conn on message erorr: %s", err.Error())
 			return
 		}
-		for _, entry := range c.pluginEntries {
+		for name, entry := range c.pluginEntries {
 			// 先异步处理没有key的回调
 			go entry.handlers[noFilterKey](event)
 			// 一次异步执行所有的 filter 和 handler 对
-			for key := range entry.fitlers {
-				go func(key string) {
-					if entry.fitlers[key](event) {
-						entry.handlers[key](event)
+			for _, key := range entry.keys {
+				go func(key string, name string) {
+					if c.pluginEntries[name].fitlers[key](event) {
+						c.pluginEntries[name].handlers[key](event)
 					}
-				}(key)
+				}(key, name)
 			}
 		}
 	}
