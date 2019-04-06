@@ -22,7 +22,8 @@ type WSClient struct {
 	conn      *websocket.Conn
 	url       string
 	closed    bool
-	quit      chan int
+	rquit     chan int
+	wquit     chan int
 	dialer    *websocket.Dialer
 	mmu       sync.Mutex
 	cmu       sync.Mutex
@@ -47,7 +48,8 @@ func (c *WSClient) Dial(url string, headers http.Header) error {
 		return err
 	}
 	c.closed = false
-	c.quit = make(chan int)
+	c.rquit = make(chan int)
+	c.wquit = make(chan int)
 	if c.OnConnect != nil {
 		go c.OnConnect(c)
 	}
@@ -58,7 +60,7 @@ func (c *WSClient) Dial(url string, headers http.Header) error {
 				if c.OnError != nil {
 					go c.OnError(err)
 				}
-				close(c.quit)
+				close(c.rquit)
 				return
 			}
 			go c.onMsg(msg)
@@ -77,7 +79,7 @@ func (c *WSClient) Send(msgType int, msg []byte) error {
 	err := c.conn.WriteMessage(msgType, msg)
 	c.mmu.Unlock()
 	if err != nil {
-		defer c.close()
+		close(c.wquit)
 		if c.OnError != nil {
 			c.OnError(err)
 		}
@@ -126,9 +128,12 @@ func (c *WSClient) setupPing() {
 	pingMsg := []byte("")
 	go func() {
 		defer pingTicker.Stop()
+		defer c.close()
 		for {
 			select {
-			case <-c.quit:
+			case <-c.rquit:
+				return
+			case <-c.wquit:
 				return
 			case <-pingTicker.C:
 				if c.Send(websocket.PingMessage, pingMsg) != nil {
