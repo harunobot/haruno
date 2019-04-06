@@ -48,10 +48,6 @@ func handleConnect(conn *clients.WSClient) {
 	}
 }
 
-func handleError(err error) {
-	logger.Errorf("cqclient error: %s", err.Error())
-}
-
 // RegisterAllPlugins 注册所有的插件
 func (c *cqclient) RegisterAllPlugins() {
 	// 1. 先全部执行加载函数
@@ -122,8 +118,12 @@ func (c *cqclient) Initialize(token string) {
 	c.apiConn.OnConnect = handleConnect
 	c.eventConn.OnConnect = handleConnect
 	// 注册错误事件回调
-	c.apiConn.OnError = handleError
-	c.eventConn.OnError = handleError
+	c.apiConn.OnError = func(err error) {
+		logger.Field("cqclient api conn error").Error(err.Error())
+	}
+	c.eventConn.OnError = func(err error) {
+		logger.Field("cqclient event conn error").Error(err.Error())
+	}
 	// 注册消息事件回调
 	c.apiConn.OnMessage = func(raw []byte) {
 		msg := new(CQResponse)
