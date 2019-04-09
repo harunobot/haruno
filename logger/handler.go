@@ -17,6 +17,7 @@ const (
 	RequestParamError = "请求参数错误"
 	FileNotFoundError = "Log文件不存在"
 	InnerServerError  = "服务器内部错误"
+	LogFileEmptyMsg   = "日志文件内容为空"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -83,6 +84,10 @@ func RawLogHandler(w http.ResponseWriter, r *http.Request) {
 	stat, err := os.Stat(logfilePath)
 	if err != nil && os.IsNotExist(err) {
 		http.Error(w, FileNotFoundError, 404)
+		return
+	}
+	if stat.Size() == 0 {
+		http.Error(w, LogFileEmptyMsg, 200)
 		return
 	}
 	fp, err := os.OpenFile(logfilePath, os.O_RDONLY, 0600)
