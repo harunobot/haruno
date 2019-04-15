@@ -62,6 +62,7 @@ func (c *cqclient) RegisterAllPlugins() {
 	}
 	// 2. 注册所有的handler和filter
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	for _, plug := range loaded {
 		pluginName := plug.Name()
 		pluginFilters := plug.Filters()
@@ -98,11 +99,16 @@ func (c *cqclient) RegisterAllPlugins() {
 		}
 		c.pluginEntries[pluginName] = entry
 	}
-	c.mu.Unlock()
 	// 3. 触发所有插件的onload事件
 	for _, plug := range loaded {
 		go plug.Loaded()
 	}
+}
+
+func (c *cqclient) deqEcho(echo int64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.echoqueue, echo)
 }
 
 // Initialize 初始化客户端
@@ -135,9 +141,7 @@ func (c *cqclient) Initialize(token string) {
 		// echo队列 - 确定发送消息是否超时
 		echo := msg.Echo
 		if c.echoqueue[echo] {
-			c.mu.Lock()
-			delete(c.echoqueue, echo)
-			c.mu.Unlock()
+			c.deqEcho(echo)
 		}
 	}
 	// 注册上报事件回调
@@ -174,9 +178,7 @@ func (c *cqclient) Initialize(token string) {
 					// 对于超过30s未响应的给出提示
 					if state && now-echo > timeForWait {
 						logger.Errorf("Echo = %d 响应超时(30s).", echo)
-						c.mu.Lock()
-						delete(c.echoqueue, echo)
-						c.mu.Unlock()
+						c.deqEcho(echo)
 					}
 				}
 			}

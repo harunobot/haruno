@@ -30,9 +30,7 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var welMsg = NewLog(LogTypeInfo, "Logger服务连接成功!")
-	Service.wscLock.Lock()
-	Service.conns[conn] = true
-	Service.wscLock.Unlock()
+	Service.setConn(conn, true)
 	quit := make(chan int)
 	setupPong(conn, quit)
 	conn.WriteJSON(welMsg)
@@ -51,9 +49,7 @@ func WSLogHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				err := c.WriteJSON(lg)
 				if err != nil {
-					Service.wscLock.Lock()
-					Service.conns[c] = false
-					Service.wscLock.Unlock()
+					Service.setConn(c, false)
 				}
 			}
 		}

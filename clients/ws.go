@@ -63,7 +63,14 @@ func (c *WSClient) Dial(url string, headers http.Header) error {
 				close(c.rquit)
 				return
 			}
-			go c.onMsg(msg)
+			if c.Filter != nil {
+				if !c.Filter(msg) {
+					continue
+				}
+			}
+			if c.OnMessage != nil {
+				go c.OnMessage(msg)
+			}
 		}
 	}()
 	go c.setupPing()
@@ -76,12 +83,12 @@ func (c *WSClient) Send(msgType int, msg []byte) error {
 		return errors.New("can not use closed connection")
 	}
 	c.mmu.Lock()
+	defer c.mmu.Unlock()
 	err := c.conn.WriteMessage(msgType, msg)
-	c.mmu.Unlock()
 	if err != nil {
 		close(c.wquit)
 		if c.OnError != nil {
-			c.OnError(err)
+			go c.OnError(err)
 		}
 		return err
 	}
@@ -91,17 +98,6 @@ func (c *WSClient) Send(msgType int, msg []byte) error {
 // IsConnected 检查是否在连接状态
 func (c *WSClient) IsConnected() bool {
 	return !c.closed
-}
-
-func (c *WSClient) onMsg(msg []byte) {
-	if c.Filter != nil {
-		if !c.Filter(msg) {
-			return
-		}
-	}
-	if c.OnMessage != nil {
-		c.OnMessage(msg)
-	}
 }
 
 func (c *WSClient) close() {

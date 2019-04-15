@@ -27,7 +27,7 @@ const LogTypeSuccess = 2
 
 // maxQueueSize 队列最大大小
 // == 用户首次通过websocket链接能看到的最大的日志数量
-const maxQueueSize = 5
+const maxQueueSize = 10
 
 var logTypeStr = []string{"info", "error", "success"}
 
@@ -265,10 +265,16 @@ func (logger *loggerService) Errorf(format string, args ...interface{}) {
 	logger.AddLog(LogTypeError, fmt.Sprintf(format, args...))
 }
 
-func delConn(conn *websocket.Conn) {
-	Service.wscLock.Lock()
-	delete(Service.conns, conn)
-	Service.wscLock.Unlock()
+func (logger *loggerService) setConn(conn *websocket.Conn, state bool) {
+	logger.wscLock.Lock()
+	defer logger.wscLock.Unlock()
+	logger.conns[conn] = state
+}
+
+func (logger *loggerService) delConn(conn *websocket.Conn) {
+	logger.wscLock.Lock()
+	defer logger.wscLock.Unlock()
+	delete(logger.conns, conn)
 }
 
 func setupPong(conn *websocket.Conn, quit chan int) {
@@ -277,7 +283,7 @@ func setupPong(conn *websocket.Conn, quit chan int) {
 	go func() {
 		defer pongTicker.Stop()
 		defer conn.Close()
-		defer delConn(conn)
+		defer Service.delConn(conn)
 		for {
 			if Service.conns[conn] != true {
 				close(quit)
