@@ -15,6 +15,7 @@ import (
 	"github.com/haruno-bot/haruno/coolq"
 	"github.com/haruno-bot/haruno/logger"
 	"github.com/haruno-bot/haruno/plugins"
+	"golang.org/x/sys/windows"
 )
 
 type config struct {
@@ -38,6 +39,8 @@ type haruno struct {
 	cqHTTPURL string
 	cqToken   string
 	webRoot   string
+	in        windows.Handle
+	inMode    uint32
 }
 
 const waitTime = time.Second * 15
@@ -60,8 +63,30 @@ func (bot *haruno) loadConfig() {
 	bot.cqToken = cfg.CQToken
 }
 
+func (bot *haruno) initStdios() {
+	bot.in = windows.Handle(os.Stdin.Fd())
+	if err := windows.GetConsoleMode(bot.in, &bot.inMode); err == nil {
+		var mode uint32
+		// Disable these modes
+		mode &^= windows.ENABLE_QUICK_EDIT_MODE
+		mode &^= windows.ENABLE_INSERT_MODE
+		mode &^= windows.ENABLE_MOUSE_INPUT
+		mode &^= windows.ENABLE_EXTENDED_FLAGS
+
+		// Enable these modes
+		mode |= windows.ENABLE_WINDOW_INPUT
+		mode |= windows.ENABLE_AUTO_POSITION
+
+		bot.inMode = mode
+		windows.SetConsoleMode(bot.in, bot.inMode)
+	} else {
+		logger.Logger.Printf("failed to get console mode for stdin: %v\n", err)
+	}
+}
+
 // Initialize 从配置文件读取配置初始化
 func (bot *haruno) Initialize() {
+	bot.initStdios()
 	bot.loadConfig()
 	// 设置环境变量
 	os.Setenv("CQHTTPURL", bot.cqHTTPURL)
