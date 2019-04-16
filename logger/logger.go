@@ -308,7 +308,7 @@ func (logger *loggerService) Initialize() {
 		Logger.Fatal("LogsPath not set please use logger.Default.SetLogsPath func set it.")
 	}
 	logspath := logger.LogsPath()
-	Logger.Printf("LogsPath = %s\n", logspath)
+	Logger.Printf("LogsPath = %s", logspath)
 	_, err := os.Stat(logspath)
 	if err != nil {
 		// 不存在目录的时候创建目录
