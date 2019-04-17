@@ -15,6 +15,7 @@ import (
 	"github.com/haruno-bot/haruno/coolq"
 	"github.com/haruno-bot/haruno/logger"
 	"github.com/haruno-bot/haruno/plugins"
+	_ "github.com/haruno-bot/haruno/sys"
 )
 
 type config struct {

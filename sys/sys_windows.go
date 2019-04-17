@@ -1,3 +1,5 @@
+// +build windows
+
 package sys
 
 import (
@@ -9,6 +11,7 @@ import (
 
 // FixConsole 修复console的系统差异
 func FixConsole() {
+
 	in := windows.Handle(os.Stdin.Fd())
 	var inMode uint32
 	if err := windows.GetConsoleMode(in, &inMode); err == nil {
@@ -20,11 +23,13 @@ func FixConsole() {
 		mode &^= windows.ENABLE_EXTENDED_FLAGS
 
 		// Enable these modes
+		mode |= windows.ENABLE_PROCESSED_INPUT
 		mode |= windows.ENABLE_WINDOW_INPUT
 		mode |= windows.ENABLE_AUTO_POSITION
 
 		inMode = mode
 		windows.SetConsoleMode(in, inMode)
+		logger.Logger.Println("windows console mode is fixed")
 	} else {
 		logger.Logger.Printf("failed to get console mode for stdin: %v\n", err)
 	}
