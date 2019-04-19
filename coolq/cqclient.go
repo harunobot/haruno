@@ -44,7 +44,7 @@ type cqclient struct {
 
 func handleConnect(conn *clients.WSClient) {
 	if conn.IsConnected() {
-		logger.Infof("%s服务已成功连接！", conn.Name)
+		logger.Infof("%s has been connected successfully!", conn.Name)
 	}
 }
 
@@ -118,24 +118,24 @@ func (c *cqclient) Initialize(token string) {
 	c.httpConn = clients.NewHTTPClient()
 	c.httpConn.Header.Set("Authorization", fmt.Sprintf("Token %s", c.token))
 
-	c.apiConn.Name = "酷Q机器人Api"
-	c.eventConn.Name = "酷Q机器人Event"
+	c.apiConn.Name = "coolq api conn"
+	c.eventConn.Name = "coolq event conn"
 	// 注册连接事件回调
 	c.apiConn.OnConnect = handleConnect
 	c.eventConn.OnConnect = handleConnect
 	// 注册错误事件回调
 	c.apiConn.OnError = func(err error) {
-		logger.Field("cqclient api conn error").Error(err.Error())
+		logger.Field(c.apiConn.Name).Error(err.Error())
 	}
 	c.eventConn.OnError = func(err error) {
-		logger.Field("cqclient event conn error").Error(err.Error())
+		logger.Field(c.eventConn.Name).Error(err.Error())
 	}
 	// 注册消息事件回调
 	c.apiConn.OnMessage = func(raw []byte) {
 		msg := new(CQResponse)
 		err := json.Unmarshal(raw, msg)
 		if err != nil {
-			logger.Errorf("API conn on message erorr: %s", err.Error())
+			logger.Field(c.apiConn.Name).Errorf("on message error", err.Error())
 			return
 		}
 		// echo队列 - 确定发送消息是否超时
@@ -149,7 +149,7 @@ func (c *cqclient) Initialize(token string) {
 		event := new(CQEvent)
 		err := json.Unmarshal(raw, event)
 		if err != nil {
-			logger.Errorf("Event conn on message erorr: %s", err.Error())
+			logger.Field(c.eventConn.Name).Errorf("on message error", err.Error())
 			return
 		}
 		for name, entry := range c.pluginEntries {
@@ -177,7 +177,7 @@ func (c *cqclient) Initialize(token string) {
 				for echo, state := range c.echoqueue {
 					// 对于超过30s未响应的给出提示
 					if state && now-echo > timeForWait {
-						logger.Errorf("Echo = %d 响应超时(30s).", echo)
+						logger.Errorf("(echo) id = %d response time out (30s)", echo)
 						c.deqEcho(echo)
 					}
 				}

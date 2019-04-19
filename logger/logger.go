@@ -305,20 +305,20 @@ func setupPong(conn *websocket.Conn, quit chan int) {
 func (logger *loggerService) Initialize() {
 	// 建立日志目录
 	if logger.logsPath == "" {
-		Logger.Fatal("LogsPath not set please use logger.Default.SetLogsPath func set it.")
+		Logger.Fatal("logsPath not set please use logger.Default.SetLogsPath func set it.")
 	}
 	logspath := logger.LogsPath()
-	Logger.Printf("LogsPath = %s\n", logspath)
+	Logger.Printf("logsPath = %s\n", logspath)
 	_, err := os.Stat(logspath)
 	if err != nil {
 		// 不存在目录的时候创建目录
 		if os.IsNotExist(err) {
-			Logger.Println("LogsPath is not existed.")
+			Logger.Println("logsPath is not existed.")
 			err = os.Mkdir(logspath, 0700)
 			if err != nil {
-				Logger.Fatal("Logger", err)
+				Logger.Fatal("logger service", err)
 			}
-			Logger.Println("LogsPath created successfully.")
+			Logger.Println("logsPath created successfully.")
 		}
 	}
 	// 创建连接池
