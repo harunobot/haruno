@@ -51,7 +51,7 @@ func handleConnect(conn *clients.WSClient) {
 // RegisterAllPlugins 注册所有的插件
 func (c *cqclient) RegisterAllPlugins() {
 	// 1. 先全部执行加载函数
-	loaded := make([]pluginInterface, 0)
+	loaded := make([]PluginInterface, 0)
 	for _, plug := range entries {
 		err := plug.Load()
 		if err != nil {
