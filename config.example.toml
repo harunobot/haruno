@@ -7,3 +7,5 @@ serverPort = 8080 # 服务端口号
 cqWSURL = "ws_url"
 cqHTTPURL = "http_url"
 cqToken = "token"
+[plugins]
+  "so file" = "Instance"

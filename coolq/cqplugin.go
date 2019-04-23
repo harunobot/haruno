@@ -1,11 +1,11 @@
 package coolq
 
-var entries = []pluginInterface{}
+var entries = []PluginInterface{}
 
-// pluginInterface 插件基础接口
+// PluginInterface 插件基础接口
 // 插件必须实现 Load 方法，以过滤器和处理器为参数
 // 完成load会执行 Onload 钩子函数
-type pluginInterface interface {
+type PluginInterface interface {
 	Name() string
 	Load() error
 	Filters() map[string]Filter
@@ -14,7 +14,7 @@ type pluginInterface interface {
 }
 
 // PluginRegister 插件注册
-func PluginRegister(plugins ...pluginInterface) {
+func PluginRegister(plugins ...PluginInterface) {
 	entries = append(entries, plugins...)
 }
 

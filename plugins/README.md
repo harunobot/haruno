@@ -5,7 +5,7 @@
 插件接口的定义：`coolq/cqplugin.go`
 
 ```go
-type pluginInterface interface {
+type PluginInterface interface {
 	Name() string
 	Load() error
 	Filters() map[string]Filter
