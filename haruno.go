@@ -89,12 +89,11 @@ func (bot *haruno) Run() {
 	r := mux.NewRouter()
 
 	if bot.c.WebRoot != "" {
-		_, err := os.Stat(bot.c.WebRoot)
-		if err == nil {
-			logger.Logger.Println("web page root is found in", fmt.Sprintf("\"%s\"", bot.c.WebRoot))
-			page := http.FileServer(http.Dir(bot.c.WebRoot))
-			r.Methods(http.MethodGet).Path("/").Handler(page)
-			r.Methods(http.MethodGet).PathPrefix("/static").Handler(page)
+		if _, err := os.Stat(bot.c.WebRoot); err == nil {
+			logger.Logger.Printf("web page root is found in \"%s\"", bot.c.WebRoot)
+			fileHandler := http.FileServer(http.Dir(bot.c.WebRoot))
+			r.Methods(http.MethodGet).Path("/").Handler(fileHandler)
+			r.Methods(http.MethodGet).PathPrefix("/static").Handler(fileHandler)
 		}
 	}
 

@@ -43,8 +43,7 @@ func (c *WSClient) Dial(url string, headers http.Header) error {
 		}
 	}
 	var err error
-	c.conn, _, err = c.dialer.Dial(url, headers)
-	if err != nil {
+	if c.conn, _, err = c.dialer.Dial(url, headers); err != nil {
 		return err
 	}
 	c.closed = false
@@ -120,9 +119,9 @@ func (c *WSClient) close() {
 }
 
 func (c *WSClient) setupPing() {
-	pingTicker := time.NewTicker(time.Second * 5)
+	ticker := time.NewTicker(time.Second * 5)
 	pingMsg := []byte("")
-	defer pingTicker.Stop()
+	defer ticker.Stop()
 	defer c.close()
 	for {
 		select {
@@ -130,7 +129,7 @@ func (c *WSClient) setupPing() {
 			return
 		case <-c.wquit:
 			return
-		case <-pingTicker.C:
+		case <-ticker.C:
 			if c.Send(websocket.PingMessage, pingMsg) != nil {
 				return
 			}

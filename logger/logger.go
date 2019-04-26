@@ -54,7 +54,7 @@ type LogInterface interface {
 	Successf(string, ...interface{})
 	Info(string)
 	Infof(string, ...interface{})
-	Error(string)
+	Error(a interface{})
 	Errorf(string, ...interface{})
 }
 
@@ -85,8 +85,13 @@ func (logger *loggerWithField) Infof(format string, args ...interface{}) {
 }
 
 // Error 错误log
-func (logger *loggerWithField) Error(text string) {
-	logger.service.Errorf("%s: %s", logger.field, text)
+func (logger *loggerWithField) Error(a interface{}) {
+	switch a.(type) {
+	case error:
+		logger.service.Errorf("%s: %v", logger.field, a.(error))
+	case string:
+		logger.service.Errorf("%s: %s", logger.field, a.(string))
+	}
 }
 
 // Errorf 格式化错误log
@@ -256,8 +261,13 @@ func (logger *loggerService) Infof(format string, args ...interface{}) {
 }
 
 // Error 错误log
-func (logger *loggerService) Error(text string) {
-	logger.AddLog(LogTypeError, text)
+func (logger *loggerService) Error(a interface{}) {
+	switch a.(type) {
+	case error:
+		logger.AddLog(LogTypeError, a.(error).Error())
+	case string:
+		logger.AddLog(LogTypeError, a.(string))
+	}
 }
 
 // Errorf 格式化错误log

@@ -55,7 +55,7 @@ func (c *cqclient) RegisterAllPlugins() {
 	for _, plug := range entries {
 		err := plug.Load()
 		if err != nil {
-			logger.Errorf("Plugin %s can't be loaded, reason:\n %s", plug.Name(), err.Error())
+			logger.Errorf("Plugin %s can't be loaded, reason:\n %v", plug.Name(), err)
 			continue
 		}
 		loaded = append(loaded, plug)
@@ -125,17 +125,17 @@ func (c *cqclient) Initialize(token string) {
 	c.eventConn.OnConnect = handleConnect
 	// 注册错误事件回调
 	c.apiConn.OnError = func(err error) {
-		logger.Field(c.apiConn.Name).Error(err.Error())
+		logger.Field(c.apiConn.Name).Error(err)
 	}
 	c.eventConn.OnError = func(err error) {
-		logger.Field(c.eventConn.Name).Error(err.Error())
+		logger.Field(c.eventConn.Name).Error(err)
 	}
 	// 注册消息事件回调
 	c.apiConn.OnMessage = func(raw []byte) {
 		msg := new(CQResponse)
 		err := json.Unmarshal(raw, msg)
 		if err != nil {
-			logger.Field(c.apiConn.Name).Errorf("on message error", err.Error())
+			logger.Field(c.apiConn.Name).Errorf("on message error %v", err)
 			return
 		}
 		// echo队列 - 确定发送消息是否超时
@@ -149,7 +149,7 @@ func (c *cqclient) Initialize(token string) {
 		event := new(CQEvent)
 		err := json.Unmarshal(raw, event)
 		if err != nil {
-			logger.Field(c.eventConn.Name).Errorf("on message error", err.Error())
+			logger.Field(c.eventConn.Name).Errorf("on message error %v", err)
 			return
 		}
 		for name, entry := range c.pluginEntries {
@@ -310,14 +310,13 @@ func (c *cqclient) GetStatus() *CQTypeGetStatus {
 	url := c.getAPIURL(ActionGetStatus)
 	res, err := c.httpConn.Get(url)
 	if err != nil {
-		logger.Errorf("cqclient http method getStatus error: %s", err.Error())
+		logger.Errorf("cqclient http method getStatus error: %v", err)
 		return nil
 	}
 	defer res.Body.Close()
 	response := new(CQResponse)
-	err = json.NewDecoder(res.Body).Decode(response)
-	if err != nil {
-		logger.Errorf("cqclient http method getStatus error: %s", err.Error())
+	if err := json.NewDecoder(res.Body).Decode(response); err != nil {
+		logger.Errorf("cqclient http method getStatus error: %v", err)
 		return nil
 	}
 	if response.RetCode != 0 {

@@ -26,8 +26,8 @@ func Infof(format string, args ...interface{}) {
 }
 
 // Error 错误log
-func Error(text string) {
-	Service.Error(text)
+func Error(a interface{}) {
+	Service.Error(a)
 }
 
 // Errorf 格式化错误log
