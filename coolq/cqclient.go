@@ -44,7 +44,7 @@ type cqclient struct {
 
 func handleConnect(conn *clients.WSClient) {
 	if conn.IsConnected() {
-		logger.Infof("%s has been connected successfully!", conn.Name)
+		logger.Successf("%s has been connected successfully!", conn.Name)
 	}
 }
 
